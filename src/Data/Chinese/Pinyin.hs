@@ -15,7 +15,7 @@ toToneMarks :: Text -> Text
 toToneMarks = modToneNumber toTonal
 
 fromToneMarks :: Text -> Text
-fromToneMarks = undefined
+fromToneMarks = error "Data.Chinese.Pinyin.fromToneMarks: undefined."
 
 modToneNumber :: (Int -> Char -> Char) -> Text -> Text
 modToneNumber fn txt
