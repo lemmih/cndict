@@ -9,6 +9,7 @@ license:             PublicDomain
 license-file:        LICENSE
 author:              Lemmih <lemmih@gmail.com>
 maintainer:          Lemmih <lemmih@gmail.com>
+homepage:            https://github.com/Lemmih/cndict
 -- copyright:
 category:            Natural Language Processing
 build-type:          Simple
@@ -17,6 +18,10 @@ cabal-version:       >=1.8
 data-files:
   data/SUBTLEX_CH_131210_CE.utf8
   data/cedict_1_0_ts_utf-8_mdbg.txt
+
+source-repository head
+    type: git
+    location: git://github.com/Lemmih/cndict.git
 
 library
   exposed-modules:     Data.Chinese.CCDict, Data.Chinese.Pinyin, Data.Chinese.Frequency
