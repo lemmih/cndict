@@ -12,6 +12,7 @@ module Data.Chinese.CCDict
   , tokenizer
   ) where
 
+import           Control.Monad       (mplus)
 import           Data.Char
 import           Data.FileEmbed
 import           Data.List           (foldl', nub)
@@ -57,7 +58,9 @@ lookup key trie =
       (x:xs) -> go xs =<< M.lookup x trie
   where
     go [] (CCTrieEntry es _) = es
-    go (x:xs) (CCTrieEntry es m) = maybe es (go xs) (M.lookup x m)
+    go (x:xs) (CCTrieEntry es m) = (go xs =<< M.lookup x m) `mplus` es
+
+
 
 
 --------------------------------------------------
