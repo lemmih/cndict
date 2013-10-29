@@ -22,7 +22,8 @@ import           Data.Chinese.Pinyin
 type SubtlexMap = Map Text SubtlexEntry
 
 data SubtlexEntry = SubtlexEntry
-  { subtlexWord     :: T.Text
+  { subtlexIndex    :: Int
+  , subtlexWord     :: T.Text
   , subtlexPinyin   :: [T.Text]
   , subtlexWCount   :: Int
   , subtlexWMillion :: Double
@@ -31,7 +32,8 @@ data SubtlexEntry = SubtlexEntry
 
 instance FromRecord SubtlexEntry where
   parseRecord rec = SubtlexEntry
-    <$> index rec 0
+    <$> pure 0
+    <*> index rec 0
     <*> fmap (map toToneMarks . T.splitOn "/") (index rec 2)
     <*> index rec 4
     <*> index rec 5 <*> index rec 14
@@ -44,7 +46,9 @@ loadSubtlexEntries path = do
     Right rows -> return rows
 
 mkSubtlexMap :: Vector SubtlexEntry -> SubtlexMap
-mkSubtlexMap rows = M.fromList [ (subtlexWord row, row) | row <- V.toList rows ]
+mkSubtlexMap rows = M.fromList
+  [ (subtlexWord row, row{subtlexIndex = n})
+  | (n,row) <- zip [0..] (V.toList rows) ]
 
 
 
