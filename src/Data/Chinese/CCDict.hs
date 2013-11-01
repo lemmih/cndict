@@ -69,6 +69,11 @@ lookup key trie =
 data Token = KnownWord Entry | UnknownWord Text
   deriving ( Read, Show, Eq, Ord )
 
+-- Interesting case: 他的话 tokenizes to [他,的话] by both google translate and
+-- MDGB. The correct tokenization is [他,的,话]. Not sure if it can be fixed without
+-- adding an entry for 他的 in the dictionary.
+-- FIXME: 多工作 should tokenize to [多,工作], not [多工,作].
+-- TODO: Mark text inclosed in curly brackets as unknown words.
 -- | Break a string of simplified chinese down to a list of tokens.
 tokenizer :: CCDict -> Text -> [Token]
 tokenizer trie inp = filter isValid $ go 0 inp inp
