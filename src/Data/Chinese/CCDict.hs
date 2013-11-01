@@ -102,8 +102,8 @@ joinEntry Nothing Nothing     = Nothing
 joinEntry Nothing (Just e)    = Just e
 joinEntry (Just e) Nothing    = Just e
 joinEntry (Just e1) (Just e2) = Just Entry
-  { entryChinese = entryChinese e1
-  , entryPinyin     = nub $ entryPinyin e1 ++ entryPinyin e2
+  { entryChinese    = entryChinese e1
+  , entryPinyin     = entryPinyin e1 -- nub $ entryPinyin e1 ++ entryPinyin e2
   , entryDefinition = nub $ entryDefinition e1 ++ entryDefinition e2 }
 
 unions :: [CCDict] -> CCDict
@@ -124,7 +124,7 @@ parseLine line | "#" `T.isPrefixOf` line = Nothing
 parseLine line =
     Just Entry
     { entryChinese = chinese
-    , entryPinyin     = map toToneMarks $ T.words $ T.tail $ T.init $ T.unwords (pinyin ++ [pin])
+    , entryPinyin     = [T.unwords $ map toToneMarks $ T.words $ T.tail $ T.init $ T.unwords (pinyin ++ [pin])]
     , entryDefinition = [T.unwords english] }
   where
     (_traditional : chinese : rest) = T.words line
