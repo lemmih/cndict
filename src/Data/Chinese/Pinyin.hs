@@ -24,7 +24,7 @@ modToneNumber fn txt
   | Just n <- findStrIndex "ou" txt'         = modify n
   | Just n <- findSecondVowel txt'           = modify n
   | Just n <- T.findIndex (`elem` "aoeiu") txt' = modify n
-  | otherwise = txt
+  | otherwise = T.init txt
   where
     tone = digitToInt (T.last txt)
     modify n = T.pack [ if n==i then fn tone c else c | (i,c) <- zip [0..] (T.unpack txt') ]
