@@ -130,11 +130,14 @@ parseLine line =
     Just Entry
     { entryChinese = chinese
     , entryPinyin     = [T.unwords $ map toToneMarks $ T.words $ T.tail $ T.init $ T.unwords (pinyin ++ [pin])]
-    , entryDefinition = [T.unwords english] }
+    , entryDefinition = splitDefinition (T.unwords english) }
   where
     (_traditional : chinese : rest) = T.words line
     (pinyin, (pin : english)) = break (\word -> T.count "]" word > 0) rest
 
+-- /first/second/third/ -> [first, second, third]
+splitDefinition :: Text -> [Text]
+splitDefinition = filter (not . T.null) . T.splitOn "/"
 
 
 --------------------------------------------------
