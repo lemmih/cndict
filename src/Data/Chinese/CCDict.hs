@@ -1,5 +1,6 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TemplateHaskell   #-}
+{-# LANGUAGE CPP   #-}
 -- | Simplified Chinese <-> English dictionary with pinyin phonetics.
 module Data.Chinese.CCDict
   ( CCDict
@@ -12,10 +13,11 @@ module Data.Chinese.CCDict
   , tokenizer
   ) where
 
-import           Control.Monad       (mplus)
+import           Control.Monad       (mplus,guard)
 import           Data.Char
 import           Data.FileEmbed
-import           Data.List           (foldl', nub)
+import           Data.List           (foldl', nub, maximumBy)
+import Data.Ord (comparing)
 import           Data.Map            (Map)
 import qualified Data.Map            as M
 import           Data.Maybe
@@ -27,6 +29,7 @@ import qualified Data.Text.IO        as T
 import           Prelude             hiding (lookup)
 
 import           Data.Chinese.Pinyin
+import           Data.Chinese.Frequency
 
 --------------------------------------------------
 -- Dictionary
@@ -36,7 +39,7 @@ import           Data.Chinese.Pinyin
 data Entry = Entry
   { entryChinese    :: Text
   , entryPinyin     :: [Text]
-  , entryDefinition :: [Text]
+  , entryDefinition :: [[Text]]
   } deriving ( Read, Show, Eq, Ord )
 
 type CCDict = Map Char CCTrieEntry
@@ -60,6 +63,16 @@ lookup key trie =
     go [] (CCTrieEntry es _) = es
     go (x:xs) (CCTrieEntry es m) = (go xs =<< M.lookup x m) `mplus` es
 
+lookupMatches :: Text -> CCDict -> Maybe [Entry]
+lookupMatches key trie =
+    case T.unpack key of
+      []     -> Nothing
+      (x:xs) -> fmap (go xs) (M.lookup x trie)
+  where
+    go [] (CCTrieEntry Nothing _) = []
+    go [] (CCTrieEntry (Just e) _) = [e]
+    go (x:xs) (CCTrieEntry Nothing m) = maybe [] (go xs) (M.lookup x m)
+    go (x:xs) (CCTrieEntry (Just e) m) = e : maybe [] (go xs) (M.lookup x m)
 
 
 
@@ -72,10 +85,22 @@ data Token = KnownWord Entry | UnknownWord Text
 -- Interesting case: 他的话 tokenizes to [他,的话] by both google translate and
 -- MDGB. The correct tokenization is [他,的,话]. Not sure if it can be fixed without
 -- adding an entry for 他的 in the dictionary.
--- FIXME: 多工作 should tokenize to [多,工作], not [多工,作].
 -- TODO: Mark text inclosed in curly brackets as unknown words.
+-- FIXME: 多工作 should tokenize to [多,工作]
+-- FIXME: 不想 should tokenize to [不,想]
+-- FIXME: 回电话 should tokenize to [回,电话]
+-- FIXME: 不知道 should tokenize to [不,知道]
+-- FIXME: 定时间 should tokenize to [定,时间]
+-- FIXME: 这位子 should tokenize to [这,位子]
+-- FIXME: 十分钟 should tokenize to [十,分钟]
+-- FIXME: 有电梯 should tokenize to [有,电梯]
+-- FIXME: 家中餐馆 should tokenize to [家,中餐馆]
+-- FIXME: 那是 should tokenize to [那,是]
+-- FIXME: 后生活 should tokenize to [后,生活]
+-- FIXME: 不愿意 should tokenize to [不,愿意]
 -- | Break a string of simplified chinese down to a list of tokens.
 tokenizer :: CCDict -> Text -> [Token]
+--tokenizer trie inp = maximumBy (comparing score) (tokenizerNondet trie inp)
 tokenizer trie inp = filter isValid $ go 0 inp inp
   where
     isValid (UnknownWord txt) = not (T.null txt)
@@ -91,6 +116,53 @@ tokenizer trie inp = filter isValid $ go 0 inp inp
       where
         unknown = UnknownWord $ T.take n unrecognied
 
+tokenizer_tests :: Bool
+tokenizer_tests = and
+    [ flat (tokenizer ccDict input) == result
+    | (input, result) <- cases ]
+  where
+    cases =
+        [ ("多工作", ["多","工作"])
+        , ("有电话", ["有","电话"]) ]
+    flat tokens = [ entryChinese entry | KnownWord entry <- tokens ]
+
+--tokenizerNondet :: CCDict -> Text -> [[Token]]
+--tokenizerNondet trie inp = {- nub $ -} map compact $ go inp
+--  where
+--    compact (UnknownWord t1 : UnknownWord t2 : rest) = compact (UnknownWord (T.append t1 t2) : rest)
+--    compact (x : xs) = x : compact xs
+--    compact [] = []
+--    isValid (UnknownWord txt) = not (T.null txt)
+--    isValid _ = True
+--    go txt | T.null txt = return []
+--    go txt =
+--      case lookupMatches txt ccDict of
+--        Nothing -> do
+--          rest <- go (T.drop 1 txt)
+--          return (UnknownWord (T.take 1 txt) : rest)
+--        Just es -> do
+--          entry <- es
+--          let len = T.length (entryChinese entry)
+--          rest  <- go (T.drop len txt)
+--          return (KnownWord entry : rest)
+--      --case lookupExact word trie of
+--      --  Nothing -> do
+--      --    guard (len == 1)
+--      --    rest <- go (T.drop len txt)
+--      --    return (UnknownWord word : rest)
+--      --  Just es -> do
+--      --    rest <- go (T.drop len txt)
+--      --    return (KnownWord es : rest)
+
+--score :: [Token] -> Double
+--score = sum . map fn
+--  where
+--    fn UnknownWord{} = 0
+--    fn (KnownWord entry) | T.length (entryChinese entry) == 1 = 0
+--    fn (KnownWord entry) =
+--      case M.lookup (entryChinese entry) subtlex of
+--        Nothing   -> 0
+--        Just freq -> subtlexWMillion freq
 
 
 --------------------------------------------------
@@ -108,8 +180,8 @@ joinEntry Nothing (Just e)    = Just e
 joinEntry (Just e) Nothing    = Just e
 joinEntry (Just e1) (Just e2) = Just Entry
   { entryChinese    = entryChinese e1
-  , entryPinyin     = entryPinyin e1 -- nub $ entryPinyin e1 ++ entryPinyin e2
-  , entryDefinition = nub $ entryDefinition e1 ++ entryDefinition e2 }
+  , entryPinyin     = entryPinyin e1 ++ entryPinyin e2
+  , entryDefinition = entryDefinition e1 ++ entryDefinition e2 }
 
 unions :: [CCDict] -> CCDict
 unions = foldl' union M.empty
@@ -128,9 +200,9 @@ parseLine :: Text -> Maybe Entry
 parseLine line | "#" `T.isPrefixOf` line = Nothing
 parseLine line =
     Just Entry
-    { entryChinese = chinese
+    { entryChinese    = chinese
     , entryPinyin     = [T.unwords $ map toToneMarks $ T.words $ T.tail $ T.init $ T.unwords (pinyin ++ [pin])]
-    , entryDefinition = splitDefinition (T.unwords english) }
+    , entryDefinition = [splitDefinition (T.unwords english)] }
   where
     (_traditional : chinese : rest) = T.words line
     (pinyin, (pin : english)) = break (\word -> T.count "]" word > 0) rest
@@ -148,4 +220,3 @@ ccDict :: CCDict
 ccDict = parse $ T.decodeUtf8 raw
   where
     raw = $(embedFile "data/cedict_1_0_ts_utf-8_mdbg.txt")
-
