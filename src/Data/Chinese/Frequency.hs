@@ -41,7 +41,7 @@ instance FromRecord SubtlexEntry where
 loadSubtlexEntries :: FilePath -> IO (Vector SubtlexEntry)
 loadSubtlexEntries path = do
   inp <- L.readFile path
-  case Csv.decodeWith (Csv.DecodeOptions 9) True inp of
+  case Csv.decodeWith (Csv.DecodeOptions 9) HasHeader inp of
     Left msg   -> error msg
     Right rows -> return rows
 
@@ -60,7 +60,7 @@ mkSubtlexMap rows = M.fromList
 
 subtlex :: SubtlexMap
 subtlex = mkSubtlexMap $
-  case Csv.decodeWith (Csv.DecodeOptions 9) True inp of
+  case Csv.decodeWith (Csv.DecodeOptions 9) HasHeader inp of
     Left msg -> error msg
     Right rows -> rows
   where
