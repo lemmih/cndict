@@ -96,11 +96,11 @@ lookupNonDet key trie = do
       let len = T.length (entryChinese entry)
 
       case lookupMatches (T.drop len key) trie of
-        Nothing -> return [entry]
-        Just rest -> do
+        Just rest | len < longest -> do
           next <- rest
           guard (T.length (entryChinese next) + len > longest)
           return [entry, next]
+        _nothing -> return [entry]
 
 
 --------------------------------------------------
@@ -154,16 +154,18 @@ tokenizer_tests =
     cases =
         [ ("多工作", ["多","工作"])
         , ("有电话", ["有","电话"]) 
-	-- , ("回电话", ["回","电话"]) -- Hm, we fail on this one.
-	, ("不知道", ["不","知道"])
-	, ("定时间", ["定","时间"])
-	-- , ("这位子", ["这","位子"]) -- Hm, we fail on this one.
-	, ("十分钟", ["十","分钟"])
-	, ("有电梯", ["有","电梯"])
-        -- , ("家中餐馆", ["家","中餐馆"])
-	, ("后生活", ["后","生活"])
-	, ("不愿意", ["不","愿意"])
-	, ("点出发", ["点","出发"])]
+      	-- , ("回电话", ["回","电话"]) -- Hm, we fail on this one.
+      	, ("不知道", ["不","知道"])
+      	, ("定时间", ["定","时间"])
+      	-- , ("这位子", ["这","位子"]) -- Hm, we fail on this one.
+      	, ("十分钟", ["十","分钟"])
+      	, ("有电梯", ["有","电梯"])
+              -- , ("家中餐馆", ["家","中餐馆"])
+      	, ("后生活", ["后","生活"])
+      	, ("不愿意", ["不","愿意"])
+      	, ("点出发", ["点","出发"])
+        , ("不会跳舞", ["不会","跳舞"]) ]
+
 flat tokens = [ entryChinese entry | KnownWord entry <- tokens ]
 
 type NonDet = Tree [Token]
