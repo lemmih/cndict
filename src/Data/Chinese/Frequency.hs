@@ -46,10 +46,17 @@ loadSubtlexEntries path = do
     Right rows -> return rows
 
 mkSubtlexMap :: Vector SubtlexEntry -> SubtlexMap
-mkSubtlexMap rows = M.fromList
+mkSubtlexMap rows = M.fromListWith join
   [ (subtlexWord row, row{subtlexIndex = n})
   | (n,row) <- zip [0..] (V.toList rows) ]
-
+  where
+    join e1 e2 = SubtlexEntry
+      { subtlexIndex = min (subtlexIndex e1) (subtlexIndex e2)
+      , subtlexWord  = subtlexWord e1
+      , subtlexPinyin = subtlexPinyin e1
+      , subtlexWCount = subtlexWCount e1 + subtlexWCount e1
+      , subtlexWMillion = subtlexWMillion e1 + subtlexWMillion e2
+      , subtlexEnglish = subtlexEnglish e1 }
 
 
 
