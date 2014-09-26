@@ -150,6 +150,8 @@ _tokenizer_tests =
       	, ("这位子", ["这","位子"])
       	, ("十分钟", ["十","分钟"])
       	, ("有电梯", ["有","电梯"])
+        , ("中午前", ["中午","前"])
+        -- , ("得很", ["得","很"]) -- Don't know how to fix this.
         -- , ("家中餐馆", ["家","中餐馆"]) -- tokenizer needs to be more greedy to correctly
                                            -- deal with this input.
       	, ("后生活", ["后","生活"])
@@ -180,13 +182,14 @@ collapseNonDet forest =
       Nothing -> []
       Just (Node entries rest,_score) -> entries ++ collapseNonDet rest
   where
-    assocs = [ (node, nodeSum node)
+    geoMean [] = 0
+    geoMean n = round (fromIntegral (product n)**(recip (fromIntegral (length n))))
+    assocs = [ (node, geoMean (filter (/=0) (nodeSum node)))
              | node <- forest ]
     wordCount word = maybe 0 subtlexWCount (M.lookup word subtlex)
     entryCount (KnownWord entry) = wordCount (entryChinese entry)
     entryCount UnknownWord{} = 0
-    entriesSum = sum . map entryCount
-    nodeSum (Node entries _) = entriesSum entries
+    nodeSum (Node entries _) = map entryCount entries
 
 -- Enhanced tokenizer, mixed non-determistic and greedy algorithm
 tokenizer' :: CCDict -> Text -> [Token]
