@@ -17,7 +17,7 @@ module Data.Chinese.CCDict
 import           Control.Monad       (mplus,guard)
 import           Data.Char
 import           Data.FileEmbed
-import           Data.List           (foldl', nub, maximumBy, sortBy)
+import           Data.List           (foldl', sortBy)
 import Data.Ord (comparing)
 import           Data.Map            (Map)
 import qualified Data.Map            as M
@@ -113,39 +113,29 @@ data Token = KnownWord Entry | UnknownWord Text
 -- MDGB. The correct tokenization is [他,的,话]. Not sure if it can be fixed without
 -- adding an entry for 他的 in the dictionary.
 -- TODO: Mark text inclosed in curly brackets as unknown words.
--- FIXME: 多工作 should tokenize to [多,工作]
 -- FIXME: 不想 should tokenize to [不,想]
--- FIXME: 回电话 should tokenize to [回,电话]
--- FIXME: 不知道 should tokenize to [不,知道]
--- FIXME: 定时间 should tokenize to [定,时间]
--- FIXME: 这位子 should tokenize to [这,位子]
--- FIXME: 十分钟 should tokenize to [十,分钟]
--- FIXME: 有电梯 should tokenize to [有,电梯]
--- FIXME: 家中餐馆 should tokenize to [家,中餐馆]
 -- FIXME: 那是 should tokenize to [那,是]
--- FIXME: 后生活 should tokenize to [后,生活]
--- FIXME: 不愿意 should tokenize to [不,愿意]
--- FIXME: 点出发 should tokenize to [点,出发]
 -- | Break a string of simplified chinese down to a list of tokens.
 tokenizer :: CCDict -> Text -> [Token]
+tokenizer = tokenizer'
 --tokenizer trie inp = maximumBy (comparing score) (tokenizerNondet trie inp)
-tokenizer trie inp = filter isValid $ go 0 inp inp
-  where
-    isValid (UnknownWord txt) = not (T.null txt)
-    isValid _ = True
-    go n unrecognied txt
-      | T.null txt = [ unknown ]
-      | otherwise =
-          case lookup txt trie of
-            Nothing -> go (n+1) unrecognied (T.drop 1 txt)
-            Just es ->
-              let rest = T.drop (T.length (entryChinese es)) txt in
-              unknown : KnownWord es : go 0 rest rest
-      where
-        unknown = UnknownWord $ T.take n unrecognied
+-- tokenizer trie inp = filter isValid $ go 0 inp inp
+--   where
+--     isValid (UnknownWord txt) = not (T.null txt)
+--     isValid _ = True
+--     go n unrecognied txt
+--       | T.null txt = [ unknown ]
+--       | otherwise =
+--           case lookup txt trie of
+--             Nothing -> go (n+1) unrecognied (T.drop 1 txt)
+--             Just es ->
+--               let rest = T.drop (T.length (entryChinese es)) txt in
+--               unknown : KnownWord es : go 0 rest rest
+--       where
+--         unknown = UnknownWord $ T.take n unrecognied
 
-tokenizer_tests :: [(Text, [Text], [Text])]
-tokenizer_tests =
+_tokenizer_tests :: [(Text, [Text], [Text])]
+_tokenizer_tests =
     [ (input, result, tokens)
     | (input, result) <- cases
     , let tokens = flat (tokenizer' ccDict input)
@@ -153,40 +143,42 @@ tokenizer_tests =
   where
     cases =
         [ ("多工作", ["多","工作"])
-        , ("有电话", ["有","电话"]) 
-      	-- , ("回电话", ["回","电话"]) -- Hm, we fail on this one.
+        , ("有电话", ["有","电话"])
+      	, ("回电话", ["回","电话"])
       	, ("不知道", ["不","知道"])
       	, ("定时间", ["定","时间"])
-      	-- , ("这位子", ["这","位子"]) -- Hm, we fail on this one.
+      	, ("这位子", ["这","位子"])
       	, ("十分钟", ["十","分钟"])
       	, ("有电梯", ["有","电梯"])
-              -- , ("家中餐馆", ["家","中餐馆"])
+        -- , ("家中餐馆", ["家","中餐馆"]) -- tokenizer needs to be more greedy to correctly
+                                           -- deal with this input.
       	, ("后生活", ["后","生活"])
       	, ("不愿意", ["不","愿意"])
       	, ("点出发", ["点","出发"])
         , ("不会跳舞", ["不会","跳舞"]) ]
 
+flat :: [Token] -> [Text]
 flat tokens = [ entryChinese entry | KnownWord entry <- tokens ]
 
 type NonDet = Tree [Token]
 
-ppNonDet :: [NonDet] -> String
-ppNonDet forest = drawForest (map (fmap (unwords . map ppToken)) forest)
-  where
-    ppToken (KnownWord entry) = T.unpack (entryChinese entry)
-    ppToken (UnknownWord txt) = T.unpack txt
+-- ppNonDet :: [NonDet] -> String
+-- ppNonDet forest = drawForest (map (fmap (unwords . map ppToken)) forest)
+--   where
+--     ppToken (KnownWord entry) = T.unpack (entryChinese entry)
+--     ppToken (UnknownWord txt) = T.unpack txt
 
-compactNonDet :: NonDet -> NonDet
-compactNonDet (Node a [Node b rest]) =
-  compactNonDet (Node (a++b) rest)
-compactNonDet (Node a rest) =
-  Node a (map compactNonDet rest)
+-- compactNonDet :: NonDet -> NonDet
+-- compactNonDet (Node a [Node b rest]) =
+--   compactNonDet (Node (a++b) rest)
+-- compactNonDet (Node a rest) =
+--   Node a (map compactNonDet rest)
 
 collapseNonDet :: [NonDet] -> [Token]
 collapseNonDet forest =
     case listToMaybe (sortBy (flip $ comparing snd) assocs) of
       Nothing -> []
-      Just (Node entries rest,score) -> entries ++ collapseNonDet rest
+      Just (Node entries rest,_score) -> entries ++ collapseNonDet rest
   where
     assocs = [ (node, nodeSum node)
              | node <- forest ]
@@ -203,11 +195,9 @@ tokenizer' trie inp = collapseNonDet (tokenizerNondet trie inp)
 tokenizerNondet :: CCDict -> Text -> [NonDet]
 tokenizerNondet trie inp = go inp
   where
-    isValid (UnknownWord txt) = not (T.null txt)
-    isValid _ = True
     go txt | T.null txt = []
     go txt =
-      case lookupNonDet txt ccDict of
+      case lookupNonDet txt trie of
         Nothing -> do
           --rest <- go (T.drop 1 txt)
           --return (UnknownWord (T.take 1 txt) : rest)
