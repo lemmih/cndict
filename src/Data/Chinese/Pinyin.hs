@@ -15,11 +15,15 @@ toToneMarks :: Text -> Text
 toToneMarks = modToneNumber toTonal
 
 fromToneMarks :: Text -> Text
-fromToneMarks = error "Data.Chinese.Pinyin.fromToneMarks: undefined."
+fromToneMarks txt = clearToneMarks $
+  case wordToneNumber txt of
+    Nothing -> txt
+    Just n  -> txt `T.append` T.pack (show n)
 
 modToneNumber :: (Int -> Char -> Char) -> Text -> Text
 modToneNumber fn txt
-  | T.null txt || not (isDigit (T.last txt)) = txt
+  | T.null txt || not (isDigit (T.last txt)) ||
+    T.last txt > '5' = txt
   | Just n <- T.findIndex (`elem` "ae") txt' = modify n
   | Just n <- findStrIndex "ou" txt'         = modify n
   | Just n <- findSecondVowel txt'           = modify n
@@ -45,14 +49,33 @@ findStrIndex key = worker 0
 
 toTonal :: Int -> Char -> Char
 toTonal n key =
-    case Prelude.lookup key lst of
+    case Prelude.lookup key toneList of
       Nothing    -> key
-      Just tones -> tones !! (n-1)
+      Just tones
+        | n < length tones -> tones !! (n-1)
+        | otherwise        -> key
   where
-    lst =
+
+toneList :: [(Char, String)]
+toneList =
       [ ('a', "āáǎàa")
       , ('o', "ōóǒòo")
       , ('e', "ēéěèe")
       , ('i', "īíǐìi")
       , ('u', "ūúǔùu") ]
 
+wordToneNumber :: Text -> Maybe Int
+wordToneNumber txt = listToMaybe
+  [ n
+  | (n, str) <- zip [1..] (transpose (map (take 4 . snd) toneList))
+  , elt <- str
+  , T.count (T.singleton elt) txt > 0 ]
+
+clearToneMarks :: Text -> Text
+clearToneMarks = T.map worker
+  where
+    worker c = fromMaybe c (lookup c assocs)
+    assocs =
+      [ (elt, clear)
+      | (clear, marked) <- toneList
+      , elt <- marked ]
