@@ -3,6 +3,7 @@
 module Data.Chinese.Pinyin
   ( toToneMarks
   , fromToneMarks
+  , clearToneMarks
   ) where
 
 import           Data.Char

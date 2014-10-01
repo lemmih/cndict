@@ -6,7 +6,6 @@
 module Data.Chinese.CCDict
   ( CCDict
   , Entry(..)
-  , entryPinyin
   , load
   , parse
   , lookup
@@ -41,19 +40,21 @@ import           Data.Chinese.Frequency
 
 -- | Dictionary entry
 data Entry = Entry
-  { entryChinese    :: {-# UNPACK #-} !Text
-  , entryPinyinRaw  :: [Text]
+  { entryChinese    :: !Text
+  , entryPinyin     :: [Text]
   , entryDefinition :: [[Text]]
   } deriving ( Read, Show, Eq, Ord )
 
-entryPinyin :: Entry -> [Text]
-entryPinyin = map (T.unwords . map toToneMarks . T.words) . entryPinyinRaw
+type RawEntry = Text
+
+-- entryPinyin :: Entry -> [Text]
+-- entryPinyin = map (T.unwords . map toToneMarks . T.words) . entryPinyinRaw
 
 type CCDict = IntMap CCTrieEntry
 data CCTrieEntry
-  = CCTrieEntry    {-# UNPACK #-} !Entry !CCDict
-  | CCTrieEntryEnd {-# UNPACK #-} !Entry
-  | CCTrieNoEntry                        !CCDict
+  = CCTrieEntry    {-# UNPACK #-} !RawEntry !CCDict
+  | CCTrieEntryEnd {-# UNPACK #-} !RawEntry
+  | CCTrieNoEntry                           !CCDict
   deriving ( Show )
 
 
@@ -67,14 +68,17 @@ load path = parse `fmap` T.readFile path
 
 -- | Load dictionary from unicode text.
 parse :: Text -> CCDict
-parse txt = fromList [ entry | Just entry <- map parseLine (T.lines txt) ]
+parse txt = fromList
+  [ (entryChinese entry, line)
+  | line <- T.lines txt
+  , Just entry <- [parseLine line] ]
 
 -- | O(n). Lookup dictionary entry for a string of simplified chinese.
 lookup :: Text -> CCDict -> Maybe Entry
 lookup key trie =
     case map ord $ T.unpack key of
       [] -> Nothing
-      (x:xs) -> go xs =<< IntMap.lookup x trie
+      (x:xs) -> fmap parseRawEntry (go xs =<< IntMap.lookup x trie)
   where
     go _ (CCTrieEntryEnd es) = Just es
     go [] (CCTrieEntry es _) = Just es
@@ -87,7 +91,7 @@ lookupMatches key trie =
     case map ord $ T.unpack key of
       []     -> Nothing
       (x:xs) ->
-        case fmap (go xs) (IntMap.lookup x trie) of
+        case fmap (map parseRawEntry . go xs) (IntMap.lookup x trie) of
           Just [] -> Nothing
           other   -> other
   where
@@ -257,27 +261,30 @@ joinTrie (CCTrieNoEntry t1) (CCTrieEntry e t2) = CCTrieEntry e (IntMap.unionWith
 joinTrie (CCTrieNoEntry t1) (CCTrieEntryEnd e) = CCTrieEntry e t1
 joinTrie (CCTrieEntry e t1) (CCTrieNoEntry t2) = CCTrieEntry e (IntMap.unionWith joinTrie t1 t2)
 joinTrie (CCTrieEntry e1 t1) (CCTrieEntry e2 t2) =
-  CCTrieEntry (joinEntry e1 e2) (IntMap.unionWith joinTrie t1 t2)
-joinTrie (CCTrieEntry e1 t2) (CCTrieEntryEnd e2) = CCTrieEntry (joinEntry e1 e2) t2
+  CCTrieEntry (joinRawEntry e1 e2) (IntMap.unionWith joinTrie t1 t2)
+joinTrie (CCTrieEntry e1 t2) (CCTrieEntryEnd e2) = CCTrieEntry (joinRawEntry e1 e2) t2
 joinTrie (CCTrieEntryEnd e) (CCTrieNoEntry t)    = CCTrieEntry e t
-joinTrie (CCTrieEntryEnd e1) (CCTrieEntry e2 t)  = CCTrieEntry (joinEntry e1 e2) t
-joinTrie (CCTrieEntryEnd e1) (CCTrieEntryEnd e2) = CCTrieEntryEnd (joinEntry e1 e2)
+joinTrie (CCTrieEntryEnd e1) (CCTrieEntry e2 t)  = CCTrieEntry (joinRawEntry e1 e2) t
+joinTrie (CCTrieEntryEnd e1) (CCTrieEntryEnd e2) = CCTrieEntryEnd (joinRawEntry e1 e2)
+
+joinRawEntry :: RawEntry -> RawEntry -> RawEntry
+joinRawEntry e1 e2 = T.unlines [e1,e2]
 
 joinEntry :: Entry -> Entry -> Entry
 joinEntry e1 e2 = Entry
   { entryChinese    = entryChinese e1
-  , entryPinyinRaw  = entryPinyinRaw e1 ++ entryPinyinRaw e2
+  , entryPinyin     = entryPinyin e1 ++ entryPinyin e2
   , entryDefinition = entryDefinition e1 ++ entryDefinition e2 }
 
 -- unions :: [CCDict] -> CCDict
 -- unions = foldl' union IntMap.empty
 
-fromList :: [Entry] -> CCDict
+fromList :: [(Text, RawEntry)] -> CCDict
 -- fromList = unions . map singleton
 fromList = foldl' (flip insert) IntMap.empty
 
-insert :: Entry -> CCDict -> CCDict
-insert entry = go (T.unpack (entryChinese entry))
+insert :: (Text, RawEntry) -> CCDict -> CCDict
+insert (key, entry) = go (T.unpack key)
   where
     go :: [Char] -> CCDict -> CCDict
     go [] _ = error "insert: Invalid entry."
@@ -299,12 +306,15 @@ insert entry = go (T.unpack (entryChinese entry))
 --     go [x]    = IntMap.singleton (ord x) (CCTrieEntryEnd entry)
 --     go (x:xs) = IntMap.singleton (ord x) (CCTrieNoEntry (go xs))
 
+parseRawEntry :: Text -> Entry
+parseRawEntry = foldr1 joinEntry . mapMaybe parseLine . T.lines
+
 parseLine :: Text -> Maybe Entry
 parseLine line | "#" `T.isPrefixOf` line = Nothing
 parseLine line =
     Just Entry
-    { entryChinese    = T.copy simplified
-    , entryPinyinRaw  = [pinyin] -- [T.unwords $ map toToneMarks $ T.words pinyin]
+    { entryChinese    = simplified
+    , entryPinyin     = [T.unwords $ map toToneMarks $ T.words pinyin]
     , entryDefinition = [splitDefinition english] }
     -- , entryPinyin     = V.singleton $ T.unwords $ map toToneMarks $ T.words $ T.tail $
     --                       T.init $ T.unwords (pinyin ++ [pin])
@@ -313,8 +323,8 @@ parseLine line =
     (_traditional, line') = T.breakOn " " line
     (simplified, line'') = T.breakOn " " (T.drop 1 line')
     (pinyin_, english_) = T.breakOn "/" (T.drop 1 line'')
-    !english = T.copy english_
-    !pinyin = T.copy $ T.dropAround (\c -> isSpace c || c == '[' || c == ']') pinyin_
+    !english = english_
+    !pinyin = T.dropAround (\c -> isSpace c || c == '[' || c == ']') pinyin_
     -- firstSep = breakOn " ", breakOn " ", breakOn "/"
     -- (_traditional : chinese : rest) = T.words (T.copy line)
     -- (pinyin, (pin : english)) = break (\word -> T.count "]" word > 0) rest
