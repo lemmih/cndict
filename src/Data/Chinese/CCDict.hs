@@ -40,9 +40,10 @@ import           Data.Chinese.Frequency
 
 -- | Dictionary entry
 data Entry = Entry
-  { entryChinese    :: !Text
-  , entryPinyin     :: [Text]
-  , entryDefinition :: [[Text]]
+  { entrySimplified  :: !Text
+  , entryTraditional :: !Text
+  , entryPinyin      :: [Text]
+  , entryDefinition  :: [[Text]]
   } deriving ( Read, Show, Eq, Ord )
 
 type RawEntry = Text
@@ -68,8 +69,8 @@ load path = parse `fmap` T.readFile path
 
 -- | Load dictionary from unicode text.
 parse :: Text -> CCDict
-parse txt = fromList
-  [ (entryChinese entry, line)
+parse txt = fromList $ concat
+  [ [ (entrySimplified entry, line), (entryTraditional entry, line) ]
   | line <- T.lines txt
   , Just entry <- [parseLine line] ]
 
@@ -109,17 +110,17 @@ lookupMatches key trie =
 lookupNonDet :: Text -> CCDict -> Maybe [[Entry]]
 lookupNonDet key trie = do
   entries <- lookupMatches key trie
-  let longest = maximum (map (T.length . entryChinese) entries)
+  let longest = maximum (map (T.length . entrySimplified) entries)
   if longest == 1
     then return [entries]
     else return $ do
       entry <- entries
-      let len = T.length (entryChinese entry)
+      let len = T.length (entrySimplified entry)
 
       case lookupMatches (T.drop len key) trie of
         Just rest | len < longest -> do
           next <- rest
-          guard (T.length (entryChinese next) + len > longest)
+          guard (T.length (entrySimplified next) + len > longest)
           return [entry, next]
         _nothing -> return [entry]
 
@@ -181,7 +182,7 @@ _tokenizer_tests =
         , ("不会跳舞", ["不会","跳舞"]) ]
 
 flat :: [Token] -> [Text]
-flat tokens = [ entryChinese entry | KnownWord entry <- tokens ]
+flat tokens = [ entrySimplified entry | KnownWord entry <- tokens ]
 
 type NonDet = Tree [Token]
 
@@ -216,7 +217,7 @@ collapseNonDet (node:nodes) =
     -- assocs = [ (node, geoMean (filter (/=0) (nodeSum node)))
     --          | node <- forest ]
     wordCount word = maybe 0 subtlexWCount (M.lookup word subtlex)
-    entryCount (KnownWord entry) = wordCount (entryChinese entry)
+    entryCount (KnownWord entry) = wordCount (entrySimplified entry)
     entryCount UnknownWord{} = 0
     nodeSum (Node entries _) = map entryCount entries
     nodeScore = geoMean . filter (/=0) . nodeSum
@@ -235,7 +236,7 @@ tokenizerNondet trie inp = go inp
           return $ Node [UnknownWord (T.take 1 txt)] $ go (T.drop 1 txt)
         Just es -> do
           entries <- es
-          let len = sum (map (T.length . entryChinese) entries)
+          let len = sum (map (T.length . entrySimplified) entries)
           return $ Node (map KnownWord entries) $ go (T.drop len txt)
 
 --score :: [Token] -> Double
@@ -272,9 +273,10 @@ joinRawEntry e1 e2 = T.unlines [e1,e2]
 
 joinEntry :: Entry -> Entry -> Entry
 joinEntry e1 e2 = Entry
-  { entryChinese    = entryChinese e1
-  , entryPinyin     = entryPinyin e1 ++ entryPinyin e2
-  , entryDefinition = entryDefinition e1 ++ entryDefinition e2 }
+  { entrySimplified  = entrySimplified e1
+  , entryTraditional = entryTraditional e1
+  , entryPinyin      = entryPinyin e1 ++ entryPinyin e2
+  , entryDefinition  = entryDefinition e1 ++ entryDefinition e2 }
 
 -- unions :: [CCDict] -> CCDict
 -- unions = foldl' union IntMap.empty
@@ -313,14 +315,15 @@ parseLine :: Text -> Maybe Entry
 parseLine line | "#" `T.isPrefixOf` line = Nothing
 parseLine line =
     Just Entry
-    { entryChinese    = simplified
-    , entryPinyin     = [T.unwords $ map toToneMarks $ T.words pinyin]
-    , entryDefinition = [splitDefinition english] }
+    { entrySimplified  = simplified
+    , entryTraditional = traditional
+    , entryPinyin      = [T.unwords $ map toToneMarks $ T.words pinyin]
+    , entryDefinition  = [splitDefinition english] }
     -- , entryPinyin     = V.singleton $ T.unwords $ map toToneMarks $ T.words $ T.tail $
     --                       T.init $ T.unwords (pinyin ++ [pin])
     -- , entryDefinition = V.singleton $ splitDefinition (T.unwords english) }
   where
-    (_traditional, line') = T.breakOn " " line
+    (traditional, line') = T.breakOn " " line
     (simplified, line'') = T.breakOn " " (T.drop 1 line')
     (pinyin_, english_) = T.breakOn "/" (T.drop 1 line'')
     !english = english_
