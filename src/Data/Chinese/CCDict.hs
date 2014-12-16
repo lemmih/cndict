@@ -17,7 +17,7 @@ module Data.Chinese.CCDict
 import           Control.Monad       (guard)
 import           Data.Char
 import           Data.FileEmbed
-import           Data.List           (foldl')
+import           Data.List           (foldl', nub)
 import           Data.IntMap (IntMap)
 import qualified Data.IntMap.Strict as IntMap
 import qualified Data.Map.Strict            as M
@@ -69,10 +69,11 @@ load path = parse `fmap` T.readFile path
 
 -- | Load dictionary from unicode text.
 parse :: Text -> CCDict
-parse txt = fromList $ concat
-  [ [ (entrySimplified entry, line), (entryTraditional entry, line) ]
+parse txt = fromList
+  [ (key, line)
   | line <- T.lines txt
-  , Just entry <- [parseLine line] ]
+  , Just entry <- [parseLine line]
+  , key <- nub [entrySimplified entry, entryTraditional entry] ]
 
 -- | O(n). Lookup dictionary entry for a string of simplified chinese.
 lookup :: Text -> CCDict -> Maybe Entry
@@ -269,7 +270,7 @@ joinTrie (CCTrieEntryEnd e1) (CCTrieEntry e2 t)  = CCTrieEntry (joinRawEntry e1 
 joinTrie (CCTrieEntryEnd e1) (CCTrieEntryEnd e2) = CCTrieEntryEnd (joinRawEntry e1 e2)
 
 joinRawEntry :: RawEntry -> RawEntry -> RawEntry
-joinRawEntry e1 e2 = T.unlines [e1,e2]
+joinRawEntry e1 e2 = T.concat [e1, "\n", e2]
 
 joinEntry :: Entry -> Entry -> Entry
 joinEntry e1 e2 = Entry
