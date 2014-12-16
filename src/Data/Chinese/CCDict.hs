@@ -14,7 +14,6 @@ module Data.Chinese.CCDict
   , tokenizer
   ) where
 
-import           Control.Monad       (guard)
 import           Data.Char
 import           Data.FileEmbed
 import           Data.List           (foldl', nub)
@@ -108,24 +107,27 @@ lookupMatches key trie =
 -- [[点,出发],[点出,发]]
 -- 出发点
 -- [[出发]]
+-- 穿上外套
+-- This can be broken up in two ways: 穿 上外 套 and 穿上 外套
+-- We want the second, more greedy tokenization.
 lookupNonDet :: Text -> CCDict -> Maybe [[Entry]]
-lookupNonDet key trie = do
-  entries <- lookupMatches key trie
-  let longest = maximum (map (T.length . entrySimplified) entries)
-  if longest == 1
-    then return [entries]
-    else return $ do
-      entry <- entries
-      let len = T.length (entrySimplified entry)
-
-      case lookupMatches (T.drop len key) trie of
-        Just rest | len < longest -> do
-          next <- rest
-          guard (T.length (entrySimplified next) + len > longest)
-          return [entry, next]
-        _nothing -> return [entry]
-
-
+lookupNonDet key trie = toMaybe $ beGreedy $
+    step (lookupMatches key trie) $ \entry1 -> do
+    let len = T.length (entrySimplified entry1)
+    entry2 <- toList $ lookupMatches (T.drop len key) trie
+    return [entry1, entry2]
+  where
+    step Nothing fn = []
+    step (Just [x]) fn = return [x]
+    step (Just lst) fn = lst >>= fn
+    beGreedy lst =
+      let len = sum . map (T.length . entrySimplified)
+          longest = maximum (map len lst)
+      in filter (\x -> len x == longest) lst
+    toList Nothing = []
+    toList (Just lst) = lst
+    toMaybe [] = Nothing
+    toMaybe lst = Just lst
 --------------------------------------------------
 -- Tokenizer
 
