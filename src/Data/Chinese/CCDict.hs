@@ -202,15 +202,19 @@ _tokenizer_tests =
         , ("老婆婆", ["老","婆婆"])
         , ("不会跳舞", ["不会","跳舞"])
         , ("穿上外套", ["穿上","外套"])
-        , ("建议", ["建议"]) ]
+        , ("建议", ["建议"])
+        , ("高明和", ["高明","和"]) ]
 
 flat :: [Token] -> [Text]
-flat tokens = [ entrySimplified entry | KnownWord entry <- tokens ]
+flat = map worker
+  where
+    worker (KnownWord entry) = entrySimplified entry
+    worker (UnknownWord txt) = txt
 
 type NonDet = Tree [Token]
 
 _ppNonDet :: [NonDet] -> String
-_ppNonDet = drawForest . map (fmap (unwords . map ppToken)) . map _compactNonDet
+_ppNonDet = drawForest . map (fmap (unwords . map ppToken))
   where
     ppToken (KnownWord entry) = T.unpack (entrySimplified entry)
     ppToken (UnknownWord txt) = T.unpack txt
@@ -239,18 +243,18 @@ collapseNonDet (node:nodes) =
     geoMean n = fromIntegral (product n)**(recip (fromIntegral (length n)))
     -- assocs = [ (node, geoMean (filter (/=0) (nodeSum node)))
     --          | node <- forest ]
-    wordCount word = maybe 0 subtlexWCount (M.lookup word subtlex)
+    wordCount word = maybe 1 subtlexWCount (M.lookup word subtlex)
     entryCount (KnownWord entry) = wordCount (entrySimplified entry)
-    entryCount UnknownWord{} = 0
+    entryCount UnknownWord{} = 1
     nodeSum (Node entries _) = map entryCount entries
-    nodeScore = geoMean . filter (/=0) . nodeSum
+    nodeScore = geoMean . nodeSum
 
 -- Enhanced tokenizer, mixed non-determistic and greedy algorithm
 tokenizer' :: CCDict -> Text -> [Token]
 tokenizer' trie inp = collapseNonDet (tokenizerNondet trie inp)
 
 tokenizerNondet :: CCDict -> Text -> [NonDet]
-tokenizerNondet trie inp = go inp
+tokenizerNondet trie inp = map _compactNonDet $ go inp
   where
     go txt | T.null txt = []
     go txt =
