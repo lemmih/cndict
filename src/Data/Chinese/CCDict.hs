@@ -238,9 +238,9 @@ collapseNonDet (node:nodes) =
         maxBy' hiScore hiItem (y:ys) =
           let score = fn y in
           if score > hiScore then maxBy' score y ys else maxBy' hiScore hiItem ys
-    geoMean :: [Int] -> Double
+    geoMean :: [Int] -> Integer
     geoMean [] = 0
-    geoMean n = fromIntegral (product n)**(recip (fromIntegral (length n)))
+    geoMean n = product $ map fromIntegral n
     -- assocs = [ (node, geoMean (filter (/=0) (nodeSum node)))
     --          | node <- forest ]
     wordCount word = maybe 1 subtlexWCount (M.lookup word subtlex)
