@@ -114,18 +114,21 @@ lookupNonDet :: Text -> CCDict -> Maybe [[Entry]]
 lookupNonDet key trie = toMaybe $ beGreedy $
     step (lookupMatches key trie) $ \entry1 -> do
     let len = T.length (entrySimplified entry1)
-    entry2 <- toList $ lookupMatches (T.drop len key) trie
-    return [entry1, entry2]
+    case lookupMatches (T.drop len key) trie of
+      Nothing -> return [entry1]
+      Just entries -> do
+        entry2 <- entries
+        return [entry1, entry2]
   where
-    step Nothing fn = []
-    step (Just [x]) fn = return [x]
+    step Nothing _ = []
+    step (Just [x]) _ = return [x]
     step (Just lst) fn = lst >>= fn
     beGreedy lst =
       let len = sum . map (T.length . entrySimplified)
-          longest = maximum (map len lst)
-      in filter (\x -> len x == longest) lst
-    toList Nothing = []
-    toList (Just lst) = lst
+          longest = maximum (map len lst')
+          mostCompact = minimum (map length lst)
+          lst' = filter (\x -> length x == mostCompact) lst
+      in filter (\x -> len x == longest) lst'
     toMaybe [] = Nothing
     toMaybe lst = Just lst
 --------------------------------------------------
@@ -159,6 +162,18 @@ tokenizer = tokenizer'
 --       where
 --         unknown = UnknownWord $ T.take n unrecognied
 
+_ppTokenizerTests :: IO ()
+_ppTokenizerTests =
+  case _tokenizer_tests of
+    [] -> putStrLn "No test failures."
+    lst -> do
+      flip mapM_ lst $ \(orig, expected, actual) -> do
+        T.putStr orig
+        putStr ": expected: "
+        T.putStr (T.unwords expected)
+        putStr ", got: "
+        T.putStrLn (T.unwords actual)
+
 _tokenizer_tests :: [(Text, [Text], [Text])]
 _tokenizer_tests =
     [ (input, result, tokens)
@@ -176,30 +191,35 @@ _tokenizer_tests =
       	, ("十分钟", ["十","分钟"])
       	, ("有电梯", ["有","电梯"])
         , ("中午前", ["中午","前"])
-        -- , ("得很", ["得","很"]) -- Don't know how to fix this.
-        -- , ("家中餐馆", ["家","中餐馆"]) -- tokenizer needs to be more greedy to correctly
-                                           -- deal with this input.
+        -- , ("得很", ["得","很"])
+        -- , ("不想", ["不","想"])
+        -- , ("那是", ["那","是"])
+        , ("外套", ["外套"])
+        , ("家中餐馆", ["家","中餐馆"])
       	, ("后生活", ["后","生活"])
       	, ("不愿意", ["不","愿意"])
       	, ("点出发", ["点","出发"])
-        , ("不会跳舞", ["不会","跳舞"]) ]
+        , ("老婆婆", ["老","婆婆"])
+        , ("不会跳舞", ["不会","跳舞"])
+        , ("穿上外套", ["穿上","外套"])
+        , ("建议", ["建议"]) ]
 
 flat :: [Token] -> [Text]
 flat tokens = [ entrySimplified entry | KnownWord entry <- tokens ]
 
 type NonDet = Tree [Token]
 
--- ppNonDet :: [NonDet] -> String
--- ppNonDet forest = drawForest (map (fmap (unwords . map ppToken)) forest)
---   where
---     ppToken (KnownWord entry) = T.unpack (entryChinese entry)
---     ppToken (UnknownWord txt) = T.unpack txt
+_ppNonDet :: [NonDet] -> String
+_ppNonDet = drawForest . map (fmap (unwords . map ppToken)) . map _compactNonDet
+  where
+    ppToken (KnownWord entry) = T.unpack (entrySimplified entry)
+    ppToken (UnknownWord txt) = T.unpack txt
 
--- compactNonDet :: NonDet -> NonDet
--- compactNonDet (Node a [Node b rest]) =
---   compactNonDet (Node (a++b) rest)
--- compactNonDet (Node a rest) =
---   Node a (map compactNonDet rest)
+_compactNonDet :: NonDet -> NonDet
+_compactNonDet (Node a [Node b rest]) =
+  _compactNonDet (Node (a++b) rest)
+_compactNonDet (Node a rest) =
+  Node a (map _compactNonDet rest)
 
 collapseNonDet :: [NonDet] -> [Token]
 collapseNonDet [] = []
