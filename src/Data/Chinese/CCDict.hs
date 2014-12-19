@@ -16,7 +16,8 @@ module Data.Chinese.CCDict
 
 import           Data.Char
 import           Data.FileEmbed
-import           Data.List           (foldl', nub)
+import           Data.List           (foldl', nub, maximumBy)
+import           Data.Ord
 import           Data.IntMap (IntMap)
 import qualified Data.IntMap.Strict as IntMap
 import qualified Data.Map.Strict            as M
@@ -111,26 +112,54 @@ lookupMatches key trie =
 -- This can be broken up in two ways: 穿 上外 套 and 穿上 外套
 -- We want the second, more greedy tokenization.
 lookupNonDet :: Text -> CCDict -> Maybe [[Entry]]
-lookupNonDet key trie = toMaybe $ beGreedy $
-    step (lookupMatches key trie) $ \entry1 -> do
-    let len = T.length (entrySimplified entry1)
-    case lookupMatches (T.drop len key) trie of
-      Nothing -> return [entry1]
-      Just entries -> do
-        entry2 <- entries
-        return [entry1, entry2]
+lookupNonDet key trie = do
+    entries <- lookupMatches key trie
+    let longest = maximumBy (comparing (T.length . entrySimplified)) entries
+
+    if length entries == 1
+      then return [entries]
+      else do
+        return $ whenEmpty [[longest]] $ maybe [] beGreedy $ sequence $ do
+          entry1 <- entries
+          case lookupMatches (T.drop (T.length (entrySimplified entry1)) key) trie of
+            Nothing -> return Nothing
+            Just entries2 -> do
+              entry2 <- entries2
+              return $ Just (entry1, entry2)
   where
-    step Nothing _ = []
-    step (Just [x]) _ = return [x]
-    step (Just lst) fn = lst >>= fn
-    beGreedy lst =
+    filterLongest :: [[Entry]] -> [[Entry]]
+    filterLongest lst =
       let len = sum . map (T.length . entrySimplified)
-          longest = maximum (map len lst')
-          mostCompact = minimum (map length lst)
-          lst' = filter (\x -> length x == mostCompact) lst
-      in filter (\x -> len x == longest) lst'
-    toMaybe [] = Nothing
-    toMaybe lst = Just lst
+          longest = maximum (map len lst)
+      in [ entries | entries <- lst, len entries == longest ]
+    beGreedy :: [(Entry,Entry)] -> [[Entry]]
+    beGreedy lst =
+      let longestFirst = maximum (map (T.length . entrySimplified . fst) lst)
+          longest = maximum [ T.length (entrySimplified e1) + T.length (entrySimplified e2)
+                    | (e1,e2) <- lst
+                    , T.length (entrySimplified e1) < longestFirst ]
+      in filterLongest $ nub $
+         [ [e1,e2]
+         | (e1,e2) <- lst
+         , T.length (entrySimplified e1) < longest
+         , T.length (entrySimplified e1) + T.length (entrySimplified e2) /= 2 ] ++
+         [ [e1]
+         | (e1,_) <- lst
+         , T.length (entrySimplified e1) == longest ]
+    whenEmpty lst [] = lst
+    whenEmpty _ lst  = lst
+  --   step Nothing _ = []
+  --   step (Just [x]) _ = return [x]
+  --   step (Just lst) fn = lst >>= fn
+  --   beGreedy lst =
+  --     let len = sum . map (T.length . entrySimplified)
+  --         longest = maximum (map len lst')
+  --         mostCompact = minimum (map length lst)
+  --         lst' = filter (\x -> length x == mostCompact) lst
+  --     in filter (\x -> len x == longest) lst'
+  --   toMaybe [] = Nothing
+  --   toMaybe lst = Just lst
+
 --------------------------------------------------
 -- Tokenizer
 
@@ -203,6 +232,10 @@ _tokenizer_tests =
         , ("不会跳舞", ["不会","跳舞"])
         , ("穿上外套", ["穿上","外套"])
         , ("建议", ["建议"])
+        , ("怎么不知道", ["怎么","不","知道"])
+        , ("蛋糕发起来", ["蛋糕","发","起来"])
+        , ("管理的人才", ["管理","的","人才"])
+        , ("轻快乐曲", ["轻快","乐曲"])
         , ("高明和", ["高明","和"]) ]
 
 flat :: [Token] -> [Text]
