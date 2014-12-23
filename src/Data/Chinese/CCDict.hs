@@ -127,6 +127,10 @@ lookupNonDet key trie = do
               entry2 <- entries2
               return $ Just (entry1, entry2)
   where
+    filterCompact :: [[Entry]] -> [[Entry]]
+    filterCompact lst =
+      let mostCompact = minimum (map length lst)
+      in [ entries | entries <- lst, length entries == mostCompact ]
     filterLongest :: [[Entry]] -> [[Entry]]
     filterLongest lst =
       let len = sum . map (T.length . entrySimplified)
@@ -138,7 +142,7 @@ lookupNonDet key trie = do
           longest = maximum [ T.length (entrySimplified e1) + T.length (entrySimplified e2)
                     | (e1,e2) <- lst
                     , T.length (entrySimplified e1) < longestFirst ]
-      in filterLongest $ nub $
+      in filterCompact $ filterLongest $ nub $
          [ [e1,e2]
          | (e1,e2) <- lst
          , T.length (entrySimplified e1) < longest
@@ -236,7 +240,10 @@ _tokenizer_tests =
         , ("蛋糕发起来", ["蛋糕","发","起来"])
         , ("管理的人才", ["管理","的","人才"])
         , ("轻快乐曲", ["轻快","乐曲"])
-        , ("高明和", ["高明","和"]) ]
+        , ("高明和", ["高明","和"])
+        , ("一下子之间", ["一下子","之间"])
+        , ("我绝没想到", ["我","绝","没想到"])
+        , ("没想到会", ["没想到","会"]) ]
 
 flat :: [Token] -> [Text]
 flat = map worker
