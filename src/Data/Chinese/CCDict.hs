@@ -291,7 +291,11 @@ collapseNonDet (node:nodes) =
 
 -- Enhanced tokenizer, mixed non-determistic and greedy algorithm
 tokenizer' :: CCDict -> Text -> [Token]
-tokenizer' trie inp = collapseNonDet (tokenizerNondet trie inp)
+tokenizer' trie inp = compress $ collapseNonDet (tokenizerNondet trie inp)
+  where
+    compress [] = []
+    compress (UnknownWord a:UnknownWord b:xs) = compress (UnknownWord (a `T.append` b):xs)
+    compress (x:xs) = x:compress xs
 
 tokenizerNondet :: CCDict -> Text -> [NonDet]
 tokenizerNondet trie inp = map _compactNonDet $ go inp
