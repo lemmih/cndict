@@ -32,7 +32,9 @@ import           Prelude             hiding (lookup)
 import Data.Tree
 
 import           Data.Chinese.Pinyin
-import           Data.Chinese.Frequency
+import qualified Data.Chinese.Frequency as Frequency
+
+import Data.Chinese.Frequency hiding (lookup)
 
 --------------------------------------------------
 -- Dictionary
@@ -283,7 +285,7 @@ collapseNonDet (node:nodes) =
     geoMean n = product $ map fromIntegral n
     -- assocs = [ (node, geoMean (filter (/=0) (nodeSum node)))
     --          | node <- forest ]
-    wordCount word = maybe 1 subtlexWCount (M.lookup word subtlex)
+    wordCount word = maybe 1 subtlexWCount (Frequency.lookup word subtlex)
     entryCount (KnownWord entry) = wordCount (entrySimplified entry)
     entryCount UnknownWord{} = 1
     nodeSum (Node entries _) = map entryCount entries
