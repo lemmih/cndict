@@ -12,8 +12,16 @@ import           Data.Maybe
 import           Data.Text  (Text)
 import qualified Data.Text  as T
 
+restoreUmlaut :: Text -> Text
+restoreUmlaut =
+  T.replace "u:" "ü" .
+  T.replace "ū:" "ǖ" .
+  T.replace "ú:" "ǘ" .
+  T.replace "ǔ:" "ǚ" .
+  T.replace "ù:" "ǜ"
+
 toToneMarks :: Text -> Text
-toToneMarks = modToneNumber toTonal
+toToneMarks = restoreUmlaut . modToneNumber toTonal
 
 fromToneMarks :: Text -> Text
 fromToneMarks txt = clearToneMarks $
