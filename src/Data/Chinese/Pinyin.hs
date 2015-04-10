@@ -1,7 +1,8 @@
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PatternGuards     #-}
 module Data.Chinese.Pinyin
-  ( toToneMarks
+  ( restoreUmlaut
+  , toToneMarks
   , fromToneMarks
   , clearToneMarks
   ) where
