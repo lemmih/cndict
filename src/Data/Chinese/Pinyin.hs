@@ -15,6 +15,7 @@ import qualified Data.Text  as T
 
 restoreUmlaut :: Text -> Text
 restoreUmlaut =
+  T.replace "v" "ü" .
   T.replace "u:" "ü" .
   T.replace "ū:" "ǖ" .
   T.replace "ú:" "ǘ" .
@@ -73,7 +74,7 @@ toneList =
       , ('e', "ēéěèe")
       , ('i', "īíǐìi")
       , ('u', "ūúǔùu")
-      , ('v', "üǖǘǚǜ") ]
+      , ('ü', "üǖǘǚǜ") ]
 
 wordToneNumber :: Text -> Maybe Int
 wordToneNumber txt = listToMaybe
