@@ -72,7 +72,8 @@ toneList =
       , ('o', "ōóǒòo")
       , ('e', "ēéěèe")
       , ('i', "īíǐìi")
-      , ('u', "ūúǔùu") ]
+      , ('u', "ūúǔùu")
+      , ('v', "üǖǘǚǜ") ]
 
 wordToneNumber :: Text -> Maybe Int
 wordToneNumber txt = listToMaybe
