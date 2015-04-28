@@ -347,7 +347,11 @@ joinRawEntry e1 e2 = T.concat [e1, "\n", e2]
 joinEntry :: Entry -> Entry -> Entry
 joinEntry e1 e2 = Entry
   { entrySimplified  = entrySimplified e1
-  , entryTraditional = entryTraditional e1
+  , entryTraditional =
+    if entryTraditional e1 == entrySimplified e1 ||
+       entryTraditional e2 == entrySimplified e1
+       then entrySimplified e1
+       else entryTraditional e1
   , entryPinyin      = entryPinyin e1 ++ entryPinyin e2
   , entryDefinition  = entryDefinition e1 ++ entryDefinition e2 }
 
