@@ -12,6 +12,8 @@ module Data.Chinese.CCDict
   , ccDict
   , Token(..)
   , tokenizer
+  , toTraditional
+  , toSimplified
   ) where
 
 import           Data.Char
@@ -413,6 +415,21 @@ parseLine line =
 splitDefinition :: Text -> [Text]
 splitDefinition = filter (not . T.null) . T.splitOn "/" . T.dropAround isSpace
 
+
+--------------------------------------------------
+-- Simplified <-> Traditional
+
+flatMap :: (Entry -> Text) -> [Token] -> Text
+flatMap fn = T.concat . map worker
+  where
+    worker (KnownWord e)     = fn e
+    worker (UnknownWord txt) = txt
+
+toTraditional :: Text -> Text
+toTraditional = flatMap entryTraditional . tokenizer ccDict
+
+toSimplified :: Text -> Text
+toSimplified = flatMap entrySimplified . tokenizer ccDict
 
 --------------------------------------------------
 -- Embedded dictionary
