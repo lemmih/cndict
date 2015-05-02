@@ -331,6 +331,7 @@ tokenizerNondet trie inp = map _compactNonDet $ go inp
 -- union :: CCDict -> CCDict -> CCDict
 -- union = IntMap.unionWith joinTrie
 
+-- joinTrie newValue oldValue
 joinTrie :: CCTrieEntry -> CCTrieEntry -> CCTrieEntry
 joinTrie (CCTrieNoEntry t1) (CCTrieNoEntry t2) = CCTrieNoEntry (IntMap.unionWith joinTrie t1 t2)
 joinTrie (CCTrieNoEntry t1) (CCTrieEntry e t2) = CCTrieEntry e (IntMap.unionWith joinTrie t1 t2)
@@ -346,16 +347,20 @@ joinTrie (CCTrieEntryEnd e1) (CCTrieEntryEnd e2) = CCTrieEntryEnd (joinRawEntry 
 joinRawEntry :: RawEntry -> RawEntry -> RawEntry
 joinRawEntry e1 e2 = T.concat [e1, "\n", e2]
 
+-- joinEntry newValue oldValue
 joinEntry :: Entry -> Entry -> Entry
 joinEntry e1 e2 = Entry
-  { entrySimplified  = entrySimplified e1
+  { -- The simplified characters must be identical
+    entrySimplified  = entrySimplified e1
+    -- 了 maps to two traditional characters: 了 and 瞭.
+    -- In these cases, choose the same as the simplified.
   , entryTraditional =
     if entryTraditional e1 == entrySimplified e1 ||
        entryTraditional e2 == entrySimplified e1
        then entrySimplified e1
        else entryTraditional e1
-  , entryPinyin      = entryPinyin e1 ++ entryPinyin e2
-  , entryDefinition  = entryDefinition e1 ++ entryDefinition e2 }
+  , entryPinyin      = entryPinyin e2 ++ entryPinyin e1
+  , entryDefinition  = entryDefinition e2 ++ entryDefinition e1 }
 
 -- unions :: [CCDict] -> CCDict
 -- unions = foldl' union IntMap.empty
