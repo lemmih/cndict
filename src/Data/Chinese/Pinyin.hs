@@ -35,10 +35,10 @@ modToneNumber :: (Int -> Char -> Char) -> Text -> Text
 modToneNumber fn txt
   | T.null txt || not (isDigit (T.last txt)) ||
     T.last txt > '5' = txt
-  | Just n <- T.findIndex (`elem` "ae") txt' = modify n
+  | Just n <- T.findIndex (`elem` ("ae"::String)) txt' = modify n
   | Just n <- findStrIndex "ou" txt'         = modify n
   | Just n <- findSecondVowel txt'           = modify n
-  | Just n <- T.findIndex (`elem` "aoeiu") txt' = modify n
+  | Just n <- T.findIndex (`elem` ("aoeiu"::String)) txt' = modify n
   | otherwise = T.init txt
   where
     tone = digitToInt (T.last txt)
@@ -48,7 +48,7 @@ modToneNumber fn txt
 findSecondVowel :: Text -> Maybe Int
 findSecondVowel = listToMaybe . drop 1 . findIndices isVowel . T.unpack
   where
-    isVowel = (`elem` "aoeiu")
+    isVowel = (`elem` ("aoeiu"::String))
 
 findStrIndex :: Text -> Text -> Maybe Int
 findStrIndex key = worker 0
