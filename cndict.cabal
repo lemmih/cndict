@@ -25,7 +25,7 @@ source-repository head
 
 library
   exposed-modules:     Data.Chinese.CCDict, Data.Chinese.Pinyin, Data.Chinese.Frequency
-  -- other-modules:
+  other-modules:       Paths_cndict
   build-depends:       base       == 4.*,
                        text       >= 0.11.0.0,
                        containers >= 0.5.0.0,
