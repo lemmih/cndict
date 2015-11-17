@@ -1,7 +1,7 @@
+{-# LANGUAGE BangPatterns      #-}
+{-# LANGUAGE CPP               #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE TemplateHaskell   #-}
-{-# LANGUAGE CPP               #-}
-{-# LANGUAGE BangPatterns      #-}
 -- | Simplified Chinese <-> English dictionary with pinyin phonetics.
 module Data.Chinese.CCDict
   ( CCDict
@@ -16,27 +16,27 @@ module Data.Chinese.CCDict
   , toSimplified
   ) where
 
+import qualified Data.ByteString        as B
 import           Data.Char
-import           Data.FileEmbed
-import           Data.List           (foldl', nub, maximumBy)
-import           Data.Ord
-import           Data.IntMap (IntMap)
-import qualified Data.IntMap.Strict as IntMap
-import qualified Data.Map.Strict            as M
+import           Data.IntMap            (IntMap)
+import qualified Data.IntMap.Strict     as IntMap
+import           Data.List              (foldl', maximumBy, nub)
 import           Data.Maybe
-import           Data.Text           (Text)
-import qualified Data.Text           as T
-import qualified Data.Text.Encoding  as T
-import qualified Data.Text.IO        as T
+import           Data.Ord
+import           Data.Text              (Text)
+import qualified Data.Text              as T
+import qualified Data.Text.Encoding     as T
+import qualified Data.Text.IO           as T
+import           Paths_cndict
+import           Prelude                hiding (lookup)
+import           System.IO.Unsafe       (unsafePerformIO)
 
-import           Prelude             hiding (lookup)
+import           Data.Tree
 
-import Data.Tree
-
-import           Data.Chinese.Pinyin
 import qualified Data.Chinese.Frequency as Frequency
+import           Data.Chinese.Pinyin
 
-import Data.Chinese.Frequency hiding (lookup)
+import           Data.Chinese.Frequency hiding (lookup)
 
 --------------------------------------------------
 -- Dictionary
@@ -221,21 +221,21 @@ _tokenizer_tests =
     cases =
         [ ("多工作", ["多","工作"])
         , ("有电话", ["有","电话"])
-      	, ("回电话", ["回","电话"])
-      	, ("不知道", ["不","知道"])
-      	, ("定时间", ["定","时间"])
-      	, ("这位子", ["这","位子"])
-      	, ("十分钟", ["十","分钟"])
-      	, ("有电梯", ["有","电梯"])
+        , ("回电话", ["回","电话"])
+        , ("不知道", ["不","知道"])
+        , ("定时间", ["定","时间"])
+        , ("这位子", ["这","位子"])
+        , ("十分钟", ["十","分钟"])
+        , ("有电梯", ["有","电梯"])
         , ("中午前", ["中午","前"])
         -- , ("得很", ["得","很"])
         -- , ("不想", ["不","想"])
         -- , ("那是", ["那","是"])
         , ("外套", ["外套"])
         , ("家中餐馆", ["家","中餐馆"])
-      	, ("后生活", ["后","生活"])
-      	, ("不愿意", ["不","愿意"])
-      	, ("点出发", ["点","出发"])
+        , ("后生活", ["后","生活"])
+        , ("不愿意", ["不","愿意"])
+        , ("点出发", ["点","出发"])
         , ("老婆婆", ["老","婆婆"])
         , ("不会跳舞", ["不会","跳舞"])
         , ("穿上外套", ["穿上","外套"])
@@ -443,7 +443,10 @@ toSimplified = flatMap entrySimplified . tokenizer ccDict
 ccDict :: CCDict
 ccDict = parse $ T.decodeUtf8 raw
   where
-    raw = $(embedFile "data/cedict_1_0_ts_utf-8_mdbg.txt")
+    -- raw = $(embedFile "data/cedict_1_0_ts_utf-8_mdbg.txt")
+    raw = unsafePerformIO $ do
+      path  <- getDataFileName "data/cedict_1_0_ts_utf-8_mdbg.txt"
+      B.readFile path
 
 -- ccDict' :: CCDict
 -- ccDict' = decode (BL.fromStrict raw)

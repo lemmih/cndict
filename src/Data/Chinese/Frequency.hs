@@ -7,21 +7,15 @@ module Data.Chinese.Frequency
   , Data.Chinese.Frequency.lookup
   ) where
 
--- import           Control.Applicative
-import qualified Data.ByteString.Lazy as L
-import qualified Data.ByteString      as B
+import qualified Data.ByteString       as B
 import qualified Data.ByteString.Char8 as B8
--- import           Data.Csv             as Csv
-import           Data.FileEmbed
-import           Data.Map             (Map)
-import qualified Data.Map.Strict            as M
-import           Data.Text            (Text)
+import           Data.Map              (Map)
+import qualified Data.Map.Strict       as M
+import           Data.Text             (Text)
+import qualified Data.Text             as T
 import           Data.Text.Encoding
-import qualified Data.Text            as T
--- import           Data.Vector          (Vector)
--- import qualified Data.Vector          as V
-
--- import           Data.Chinese.Pinyin
+import           Paths_cndict
+import           System.IO.Unsafe      (unsafePerformIO)
 
 type SubtlexMap = Map B.ByteString RawEntry
 
@@ -113,7 +107,11 @@ subtlex :: SubtlexMap
 subtlex = mkSubtlexMap $
     rows
   where
-    utfData = $(embedFile "data/SUBTLEX_CH_131210_CE.utf8")
+    utfData = unsafePerformIO $ do
+      path  <- getDataFileName "data/SUBTLEX_CH_131210_CE.utf8"
+      B.readFile path
+    -- utfData = $(embedFile "data/SUBTLEX_CH_131210_CE.utf8")
+    -- utfData = B.empty
     rows = drop 1 (B.split 0xa utfData)
 
 -- subtlex :: SubtlexMap
