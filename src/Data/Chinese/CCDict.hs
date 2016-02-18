@@ -9,6 +9,7 @@ module Data.Chinese.CCDict
   , load
   , parse
   , lookup
+  , lookupMatches
   , ccDict
   , Token(..)
   , tokenizer
@@ -228,6 +229,7 @@ _tokenizer_tests =
         , ("十分钟", ["十","分钟"])
         , ("有电梯", ["有","电梯"])
         , ("中午前", ["中午","前"])
+        , ("好心地", ["好心","地"])
         -- , ("得很", ["得","很"])
         -- , ("不想", ["不","想"])
         -- , ("那是", ["那","是"])
