@@ -75,7 +75,13 @@ tokenLength UnknownWord{} = 0
 tokenLength (KnownWord e) = T.length (entrySimplified e)
 
 flattenGroups :: [[[Token]]] -> [Token]
-flattenGroups = concatMap pickBest
+flattenGroups = joinUnknownWords . concatMap pickBest
+  where
+    joinUnknownWords [] = []
+    joinUnknownWords (UnknownWord a:UnknownWord b:rest) =
+      joinUnknownWords (UnknownWord (a `T.append` b):rest)
+    joinUnknownWords (x:xs) =
+      x : joinUnknownWords xs
 
 pickBest :: [[Token]] -> [Token]
 pickBest lst =

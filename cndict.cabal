@@ -2,7 +2,7 @@
 -- documentation, see http://haskell.org/cabal/users-guide/
 
 name:                cndict
-version:             0.7.0
+version:             0.7.1
 synopsis:            Chinese/Mandarin <-> English dictionary, Chinese lexer.
 -- description:
 license:             PublicDomain
