@@ -34,9 +34,9 @@ splitText dict txt =
   [ case CC.lookupMatches offset dict of
       Nothing -> [UnknownWord char]
       Just entries -> map KnownWord entries
-  | n <- [0..T.length txt-1]
-  , let offset = T.drop n txt
-        char = T.take 1 offset ]
+  | offset <- T.tails txt
+  , not (T.null offset)
+  , let char = T.take 1 offset ]
 
 -- [[A,AB],[B]] -> [ [[A,B],[AB]] ]
 -- [[A,AB],[BC],[C]] -> [[[A,BC],[AB,C]]]
