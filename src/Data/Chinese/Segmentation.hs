@@ -62,6 +62,22 @@ groupLength = worker 1
       let maxLength = maximum (map tokenLength ts) in
       1 + worker (max l maxLength - 1) tss
 
+filterExceptions :: [[Token]] -> [[Token]]
+filterExceptions lst = worker lst
+  where
+    worker (x:xs) =
+      let ws = [ entrySimplified e | KnownWord e <- x ] in
+      case ws `elem` exceptions of
+        False -> worker xs
+        True  -> [x]
+    worker [] = lst
+    exceptions =
+      [["家", "中餐馆"]
+      ,["这", "位子"]
+      ,["十", "分钟"]
+      ,["一", "点钟"]
+      ,["合上", "书"]]
+
 greedyGroups :: [[[Token]]] -> [[[Token]]]
 greedyGroups = map worker
   where
@@ -69,7 +85,7 @@ greedyGroups = map worker
       filter (onlyWithLength (minimum $ map length tss)
                              (maximum $ map (maximum.map tokenLength) tss)) tss
     onlyWithLength len tlen ts =
-      length ts == len && maximum (map tokenLength ts) == tlen
+      length ts == len -- && maximum (map tokenLength ts) == tlen
 
 tokenLength UnknownWord{} = 0
 tokenLength (KnownWord e) = T.length (entrySimplified e)
@@ -130,7 +146,9 @@ tokenizer :: Text -> [Token]
 tokenizer = tokenizer_ CC.ccDict
 
 tokenizer_ :: CC.CCDict -> Text -> [Token]
-tokenizer_ dict = flattenGroups . greedyGroups . findGroups . splitText dict
+tokenizer_ dict =
+  flattenGroups . greedyGroups . map filterExceptions .
+  findGroups . splitText dict
 
 _ppSegmentationTests =
     forM_ wrong $ \(txt, expected, got) -> do
@@ -200,6 +218,7 @@ _ppSegmentationTests =
 
         , ("我合上书准备离开", "我 合上 书 准备 离开")
         , ("他的话","他 的 话")
+        , ("你用什么方法学习","你 用 什么 方法 学习")
         ]
 
 
