@@ -4,6 +4,7 @@ import Data.Chinese.CCDict
 import Data.Chinese.Segmentation
 import Data.Chinese.Frequency
 import Data.Text
+import qualified Data.Text.IO as T
 import Control.Exception
 import Control.Monad
 
@@ -13,7 +14,5 @@ main = do
   evaluate ccDict
   putStrLn "Loading word frequency database..."
   evaluate freqMap
-  forever $ do
-    putStrLn "Type some Chinese characters and I'll tell you how to segment the words:"
-    txt <- getLine
-    putStrLn $ ppTokens $ tokenizer (pack txt)
+  txt <- T.getContents
+  putStrLn $ ppTokens $ tokenizer txt
