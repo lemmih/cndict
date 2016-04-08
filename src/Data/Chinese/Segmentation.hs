@@ -2,20 +2,20 @@
 module Data.Chinese.Segmentation
   ( Token(..)
   , Entry(..)
+  , entrySimplified
+  , entryTraditional
+  , entryPinyin
+
   , tokenizer
-  , tokenizer_
   , ppTokens
   , toTraditional
   , toSimplified
   ) where
 
-import Data.Chinese.CCDict (Entry(..))
+import Data.Chinese.CCDict (Entry(..), entrySimplified, entryTraditional, entryWordFrequency, entryPinyin)
 import qualified Data.Chinese.CCDict as CC
-import qualified Data.Chinese.Frequency as F
 import qualified Data.Text as T
-import qualified Data.Map.Strict       as M
 import Data.Text (Text)
-import qualified Data.IntMap as IntMap
 import Data.List
 import Data.Maybe
 import Control.Monad
@@ -29,9 +29,9 @@ data Token = KnownWord Entry | UnknownWord Text
 -- [[A,AB],[B],[C]]
 -- [ [[A,B],[AB]]
 -- , [[C]] ]
-splitText :: CC.CCDict -> Text -> [[Token]]
-splitText dict txt =
-  [ case CC.lookupMatches offset dict of
+splitText :: Text -> [[Token]]
+splitText txt =
+  [ case CC.lookupMatches offset of
       Nothing -> [UnknownWord char]
       Just entries -> map KnownWord entries
   | offset <- T.tails txt
@@ -131,24 +131,21 @@ tokenScore :: Token -> Maybe Int
 tokenScore UnknownWord{} = Nothing
 tokenScore (KnownWord e)
   -- | T.length (entrySimplified e) == 1 = Nothing
-  | otherwise = Just $ wordCount (entrySimplified e)
+  | otherwise = Just $ entryWordFrequency e
 
-wordCount :: Text -> Int
-wordCount txt =
-  case M.lookup txt F.freqMap of
-    Just n -> n
-    Nothing -> 0 {-minimum
-      [ M.findWithDefault 1 char F.freqMap
-      | char <- T.chunksOf 1 txt ]-}
+--wordCount :: Text -> Int
+--wordCount txt =
+--  case F.wordFrequency txt of
+--    Just n -> n
+--    Nothing -> 0 {-minimum
+--      [ M.findWithDefault 1 char F.freqMap
+--      | char <- T.chunksOf 1 txt ]-}
 
 -- | Break a string of simplified chinese down to a list of tokens.
 tokenizer :: Text -> [Token]
-tokenizer = tokenizer_ CC.ccDict
-
-tokenizer_ :: CC.CCDict -> Text -> [Token]
-tokenizer_ dict =
+tokenizer =
   flattenGroups . greedyGroups . map filterExceptions .
-  findGroups . splitText dict
+  findGroups . splitText
 
 _ppSegmentationTests =
     forM_ wrong $ \(txt, expected, got) -> do
