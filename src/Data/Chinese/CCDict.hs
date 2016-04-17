@@ -117,7 +117,7 @@ lookupMatch key
       Just (first, _newUpper) ->
         scrapeEntry ccDict first key
     where
-      (upper, lower) = bounds ccDict
+      (lower, upper) = bounds ccDict
 
 scrapeEntry :: CCDict -> Int -> Text -> Maybe Entry
 scrapeEntry dict nth key =
