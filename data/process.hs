@@ -17,7 +17,7 @@ import Data.Ord
 -- They are odd words that are better left out of the dictionary.
 blacklist :: [Text]
 blacklist =
-  [ "得很", "那是", "到了"
+  [ "得很", "那是", "到了", "A"
   , "里人", "多事", "你我", "家的" ]
 
 
@@ -98,6 +98,3 @@ Find AB or index of first word starting with AB
 If found AB, add to result list
 
 -}
-
-
-
