@@ -233,5 +233,3 @@ ppVariant (Variant simplified traditional frequency pinyin english) =
 -- /first/second/third/ -> [first, second, third]
 splitDefinition :: Text -> [Text]
 splitDefinition = filter (not . T.null) . T.splitOn "/" . T.dropAround isSpace
-
-

@@ -33,7 +33,9 @@ main = do
             , let [word, countStr, _ty] = T.words line
                   Right (count,_) = T.decimal countStr ]
   dict <- readCCDict "cedict_1_0_ts_utf-8_mdbg.txt"
-  let entries = concat
+  let smallest [] = 0
+      smallest (x:xs) = foldr min x xs
+      entries = concat
         [ if traditional == simplified
           then [(entry, Simplified, count)]
           else [(entry, Traditional, count)
@@ -41,7 +43,9 @@ main = do
         | entry@(traditional, simplified, pinyin, english) <- dict
         , not (traditional `elem` blacklist)
         , not (simplified `elem` blacklist)
-        , let count = T.pack $ show $
+        , let fallback 0 = smallest (catMaybes [ M.lookup c m | c <- T.chunksOf 1 simplified ])
+              fallback other = other
+        , let count = T.pack $ show $ fallback $
                 M.findWithDefault 0 simplified m `max`
                 M.findWithDefault 0 traditional m ]
       key ((traditional, _, _, _), Traditional, _) = traditional
