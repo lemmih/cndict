@@ -18,7 +18,8 @@ import Data.Ord
 blacklist :: [Text]
 blacklist =
   [ "得很", "那是", "到了", "A"
-  , "里人", "多事", "你我", "家的" ]
+  , "里人", "多事", "你我", "家的"
+  , "Q", "这不" ]
 
 
 data Type = Traditional | Simplified
