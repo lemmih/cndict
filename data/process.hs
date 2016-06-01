@@ -43,7 +43,7 @@ main = do
         | entry@(traditional, simplified, pinyin, english) <- dict
         , not (traditional `elem` blacklist)
         , not (simplified `elem` blacklist)
-        , let fallback 0 = smallest (catMaybes [ M.lookup c m | c <- T.chunksOf 1 simplified ])
+        , let -- fallback 0 = smallest (catMaybes [ M.lookup c m | c <- T.chunksOf 1 simplified ])
               fallback other = other
         , let count = T.pack $ show $ fallback $
                 M.findWithDefault 0 simplified m `max`
