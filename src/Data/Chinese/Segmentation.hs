@@ -2,6 +2,7 @@
 module Data.Chinese.Segmentation
   ( Token(..)
   , Entry(..)
+  , entryOriginal
   , entrySimplified
   , entryTraditional
   , entryPinyin
@@ -12,14 +13,16 @@ module Data.Chinese.Segmentation
   , toSimplified
   ) where
 
-import Data.Chinese.CCDict (Entry(..), entrySimplified, entryTraditional, entryWordFrequency, entryPinyin)
+import           Control.Monad
+import           Data.Chinese.CCDict (Entry (..), entryOriginal, entryPinyin,
+                                      entrySimplified, entryTraditional,
+                                      entryWordFrequency)
 import qualified Data.Chinese.CCDict as CC
-import qualified Data.Text as T
-import Data.Text (Text)
-import Data.List
-import Data.Maybe
-import Control.Monad
-import Data.Ord
+import           Data.List
+import           Data.Maybe
+import           Data.Ord
+import           Data.Text           (Text)
+import qualified Data.Text           as T
 
 data Token = KnownWord Entry | UnknownWord Text
   deriving ( Read, Show, Eq, Ord )

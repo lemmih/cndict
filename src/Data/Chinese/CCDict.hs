@@ -7,6 +7,7 @@ module Data.Chinese.CCDict
   , Entry(..)
   , ppEntry
   , entryVariants
+  , entryOriginal
   , entrySimplified
   , entryTraditional
   , entryWordFrequency
@@ -119,11 +120,17 @@ lookupMatch key
     where
       (lower, upper) = bounds ccDict
 
+allVariants :: [Variant]
+allVariants = worker 0
+  where
+    worker nth | nth > snd (bounds ccDict) = []
+    worker nth = parseVariant (ccDictNth nth ccDict) : worker (nth+1)
+
 scrapeEntry :: CCDict -> Int -> Text -> Maybe Entry
 scrapeEntry dict nth key =
     case variants of
       [] -> Nothing
-      (v:vs) -> Just (Entry v vs)
+      (v:vs) -> Just (Entry key v vs)
   where
     variants = scrapeVariants dict nth key
 
@@ -183,7 +190,7 @@ parseVariant line =
 --  , entryDefinition  :: [[Text]]
 --  } deriving ( Read, Show, Eq, Ord )
 
-data Entry = Entry Variant [Variant]
+data Entry = Entry !Text Variant [Variant]
   deriving (Show, Read, Eq, Ord)
 data Variant = Variant
   { variantSimplified    :: !Text
@@ -193,11 +200,14 @@ data Variant = Variant
   , variantDefinitions   :: [Text]
   } deriving ( Read, Show, Eq, Ord )
 
+entryOriginal :: Entry -> Text
+entryOriginal (Entry o _v _vs) = o
+
 entryVariants :: Entry -> [Variant]
-entryVariants (Entry v vs) = v:vs
+entryVariants (Entry _o v vs) = v:vs
 
 dominantVariant :: Entry -> Variant
-dominantVariant (Entry v vs) =
+dominantVariant (Entry _o v vs) =
     foldr dom v vs
   where
     dom v1 v2
