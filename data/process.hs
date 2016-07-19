@@ -19,7 +19,7 @@ blacklist :: [Text]
 blacklist =
   [ "得很", "那是", "到了", "A"
   , "里人", "多事", "你我", "家的"
-  , "Q", "这不" ]
+  , "Q", "这不", "你等" ]
 
 
 data Type = Traditional | Simplified
