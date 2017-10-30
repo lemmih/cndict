@@ -33,4 +33,3 @@ library
                        array
   hs-source-dirs:      src
   ghc-options:         -Wall
-  ghc-prof-options:    -auto-all
