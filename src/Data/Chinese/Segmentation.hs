@@ -139,9 +139,7 @@ geoMean ls = round $
 
 tokenScore :: Token -> Maybe Int
 tokenScore UnknownWord{} = Nothing
-tokenScore (KnownWord e)
-  -- | T.length (entrySimplified e) == 1 = Nothing
-  | otherwise = Just $ entryWordFrequency e
+tokenScore (KnownWord e) = Just $ entryWordFrequency e
 
 --wordCount :: Text -> Int
 --wordCount txt =
