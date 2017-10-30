@@ -4,6 +4,7 @@
 -- | Simplified Chinese <-> English dictionary with pinyin phonetics.
 module Data.Chinese.CCDict
   ( initiate
+  , version
   , Entry(..)
   , ppEntry
   , entryVariants
