@@ -12,6 +12,7 @@ import Data.Chinese.Pinyin
 import Data.Maybe
 import Data.List
 import Data.Ord
+import Control.Monad
 
 -- These words cause problems for the word segmentation code.
 -- They are odd words that are better left out of the dictionary.
@@ -51,18 +52,29 @@ main = do
       key ((traditional, _, _, _), Traditional, _) = traditional
       key ((_,simplified, _, _), Simplified, _) = simplified
       sorted = sortBy (comparing key) entries
-  T.writeFile "dict.sorted" $ T.unlines
-    [ case ty of
-        _ | traditional == simplified ->
-          T.intercalate "\t" [simplified, count, pinyin, english]
-        Traditional ->
-          T.intercalate "\t" [traditional, simplified, "T", count, pinyin, english]
-        Simplified ->
-          T.intercalate "\t" [simplified, traditional, "S", count, pinyin, english]
-    | ((traditional, simplified, pinyin, english), ty, count) <- sorted ]
+      chunks = chunksOf 10000 sorted
+      render ((traditional, simplified, pinyin, english), ty, count) =
+        case ty of
+          _ | traditional == simplified ->
+            T.intercalate "\t" [simplified, count, pinyin, english]
+          Traditional ->
+            T.intercalate "\t" [traditional, simplified, "T", count, pinyin, english]
+          Simplified ->
+            T.intercalate "\t" [simplified, traditional, "S", count, pinyin, english]
+  forM_ (zip [0..] chunks) $ \(n,chunk) -> do
+    let padded | n < 10    = '0':show n
+               | otherwise = show n
+        name = "dict.sorted." ++ padded
+    T.writeFile name $ T.unlines (map render chunk)
   --T.writeFile "dict.txt.big.sorted" $ T.unlines
   --  [ T.unwords [key, T.pack $ show val]
   --  | (key, val) <- M.toAscList m ]
+
+chunksOf :: Int -> [e] -> [[e]]
+chunksOf _ [] = []
+chunksOf i ls =
+  let (this,next) = splitAt i ls
+  in this : chunksOf i next
 
 -- Traditional, Simplified, Pinyin, Definitions
 readCCDict :: FilePath -> IO [(Text,Text,Text,Text)]

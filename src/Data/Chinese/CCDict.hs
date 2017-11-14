@@ -1,6 +1,7 @@
 {-# LANGUAGE BangPatterns      #-}
 {-# LANGUAGE CPP               #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE TemplateHaskell #-}
 -- | Simplified Chinese <-> English dictionary with pinyin phonetics.
 module Data.Chinese.CCDict
   ( initiate
@@ -24,10 +25,11 @@ import           Data.Ord
 import           Data.Text              (Text)
 import qualified Data.Text              as T
 import qualified Data.Text.IO           as T
+import qualified Data.Text.Encoding           as T
 import           Paths_cndict
 import           Prelude                hiding (lookup)
 import           System.IO.Unsafe       (unsafePerformIO)
-
+import Data.FileEmbed
 
 import qualified Data.Text.Internal as T
 import qualified Data.Text.Array as T
@@ -56,11 +58,33 @@ mkCCDict text@(T.Text arr _ len) =
     n = length ls
 
 ccDict :: CCDict
-ccDict = mkCCDict utfData
+ccDict = mkCCDict (T.concat
+    [utfData00, utfData01, utfData02, utfData03, utfData04, utfData05, utfData06
+    ,utfData07, utfData08, utfData09, utfData10, utfData11, utfData12, utfData13
+    ,utfData14, utfData15, utfData16, utfData17, utfData18])
   where
-    utfData = unsafePerformIO $ do
-      path  <- getDataFileName "data/dict.sorted"
-      T.readFile path
+    utfData00 = T.decodeUtf8 $(embedFile "data/dict.sorted.00")
+    utfData01 = T.decodeUtf8 $(embedFile "data/dict.sorted.01")
+    utfData02 = T.decodeUtf8 $(embedFile "data/dict.sorted.02")
+    utfData03 = T.decodeUtf8 $(embedFile "data/dict.sorted.03")
+    utfData04 = T.decodeUtf8 $(embedFile "data/dict.sorted.04")
+    utfData05 = T.decodeUtf8 $(embedFile "data/dict.sorted.05")
+    utfData06 = T.decodeUtf8 $(embedFile "data/dict.sorted.06")
+    utfData07 = T.decodeUtf8 $(embedFile "data/dict.sorted.07")
+    utfData08 = T.decodeUtf8 $(embedFile "data/dict.sorted.08")
+    utfData09 = T.decodeUtf8 $(embedFile "data/dict.sorted.09")
+    utfData10 = T.decodeUtf8 $(embedFile "data/dict.sorted.10")
+    utfData11 = T.decodeUtf8 $(embedFile "data/dict.sorted.11")
+    utfData12 = T.decodeUtf8 $(embedFile "data/dict.sorted.12")
+    utfData13 = T.decodeUtf8 $(embedFile "data/dict.sorted.13")
+    utfData14 = T.decodeUtf8 $(embedFile "data/dict.sorted.14")
+    utfData15 = T.decodeUtf8 $(embedFile "data/dict.sorted.15")
+    utfData16 = T.decodeUtf8 $(embedFile "data/dict.sorted.16")
+    utfData17 = T.decodeUtf8 $(embedFile "data/dict.sorted.17")
+    utfData18 = T.decodeUtf8 $(embedFile "data/dict.sorted.18")
+    -- unsafePerformIO $ do
+    --   path  <- getDataFileName "data/dict.sorted"
+    --   T.readFile path
 
 ccDictNth :: Int -> CCDict -> Text
 ccDictNth n (CCDict arr totalLen offsets) =

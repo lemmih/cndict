@@ -15,9 +15,6 @@ category:            Natural Language Processing
 build-type:          Simple
 cabal-version:       >=1.8
 
-data-files:
-  data/dict.sorted
-
 source-repository head
     type: git
     location: git://github.com/Lemmih/cndict.git
@@ -30,6 +27,7 @@ library
   build-depends:       base       == 4.*,
                        text       >= 0.11.0.0,
                        bytestring >= 0.9.0.0,
-                       array
+                       array,
+                       file-embed
   hs-source-dirs:      src
   ghc-options:         -Wall
