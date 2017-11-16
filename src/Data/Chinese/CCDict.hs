@@ -57,31 +57,33 @@ mkCCDict text@(T.Text arr _ len) =
       | T.Text _ offset _length <- ls ]
     n = length ls
 
+-- GHC sucks at dealing with large strings so we have to split the dictionary
+-- into smaller chunks.
 ccDict :: CCDict
 ccDict = mkCCDict (T.concat
     [utfData00, utfData01, utfData02, utfData03, utfData04, utfData05, utfData06
     ,utfData07, utfData08, utfData09, utfData10, utfData11, utfData12, utfData13
     ,utfData14, utfData15, utfData16, utfData17, utfData18])
   where
-    utfData00 = T.decodeUtf8 $(embedFile "data/dict.sorted.00")
-    utfData01 = T.decodeUtf8 $(embedFile "data/dict.sorted.01")
-    utfData02 = T.decodeUtf8 $(embedFile "data/dict.sorted.02")
-    utfData03 = T.decodeUtf8 $(embedFile "data/dict.sorted.03")
-    utfData04 = T.decodeUtf8 $(embedFile "data/dict.sorted.04")
-    utfData05 = T.decodeUtf8 $(embedFile "data/dict.sorted.05")
-    utfData06 = T.decodeUtf8 $(embedFile "data/dict.sorted.06")
-    utfData07 = T.decodeUtf8 $(embedFile "data/dict.sorted.07")
-    utfData08 = T.decodeUtf8 $(embedFile "data/dict.sorted.08")
-    utfData09 = T.decodeUtf8 $(embedFile "data/dict.sorted.09")
-    utfData10 = T.decodeUtf8 $(embedFile "data/dict.sorted.10")
-    utfData11 = T.decodeUtf8 $(embedFile "data/dict.sorted.11")
-    utfData12 = T.decodeUtf8 $(embedFile "data/dict.sorted.12")
-    utfData13 = T.decodeUtf8 $(embedFile "data/dict.sorted.13")
-    utfData14 = T.decodeUtf8 $(embedFile "data/dict.sorted.14")
-    utfData15 = T.decodeUtf8 $(embedFile "data/dict.sorted.15")
-    utfData16 = T.decodeUtf8 $(embedFile "data/dict.sorted.16")
-    utfData17 = T.decodeUtf8 $(embedFile "data/dict.sorted.17")
-    utfData18 = T.decodeUtf8 $(embedFile "data/dict.sorted.18")
+    utfData00 = T.decodeUtf8 $(embedFile "data/dict-sorted-00.txt")
+    utfData01 = T.decodeUtf8 $(embedFile "data/dict-sorted-01.txt")
+    utfData02 = T.decodeUtf8 $(embedFile "data/dict-sorted-02.txt")
+    utfData03 = T.decodeUtf8 $(embedFile "data/dict-sorted-03.txt")
+    utfData04 = T.decodeUtf8 $(embedFile "data/dict-sorted-04.txt")
+    utfData05 = T.decodeUtf8 $(embedFile "data/dict-sorted-05.txt")
+    utfData06 = T.decodeUtf8 $(embedFile "data/dict-sorted-06.txt")
+    utfData07 = T.decodeUtf8 $(embedFile "data/dict-sorted-07.txt")
+    utfData08 = T.decodeUtf8 $(embedFile "data/dict-sorted-08.txt")
+    utfData09 = T.decodeUtf8 $(embedFile "data/dict-sorted-09.txt")
+    utfData10 = T.decodeUtf8 $(embedFile "data/dict-sorted-10.txt")
+    utfData11 = T.decodeUtf8 $(embedFile "data/dict-sorted-11.txt")
+    utfData12 = T.decodeUtf8 $(embedFile "data/dict-sorted-12.txt")
+    utfData13 = T.decodeUtf8 $(embedFile "data/dict-sorted-13.txt")
+    utfData14 = T.decodeUtf8 $(embedFile "data/dict-sorted-14.txt")
+    utfData15 = T.decodeUtf8 $(embedFile "data/dict-sorted-15.txt")
+    utfData16 = T.decodeUtf8 $(embedFile "data/dict-sorted-16.txt")
+    utfData17 = T.decodeUtf8 $(embedFile "data/dict-sorted-17.txt")
+    utfData18 = T.decodeUtf8 $(embedFile "data/dict-sorted-18.txt")
     -- unsafePerformIO $ do
     --   path  <- getDataFileName "data/dict.sorted"
     --   T.readFile path

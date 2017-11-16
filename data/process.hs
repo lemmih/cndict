@@ -64,7 +64,7 @@ main = do
   forM_ (zip [0..] chunks) $ \(n,chunk) -> do
     let padded | n < 10    = '0':show n
                | otherwise = show n
-        name = "dict.sorted." ++ padded
+        name = "dict-sorted-" ++ padded ++ ".txt"
     T.writeFile name $ T.unlines (map render chunk)
   --T.writeFile "dict.txt.big.sorted" $ T.unlines
   --  [ T.unwords [key, T.pack $ show val]
