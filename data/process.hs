@@ -27,6 +27,7 @@ data Type = Traditional | Simplified
 
 main :: IO ()
 main = do
+  defs <- readDefaults
   txt <- T.readFile "dict.txt.big"
   let m = M.fromListWith max
             [ (word, count)
@@ -54,13 +55,14 @@ main = do
       sorted = sortBy (comparing key) entries
       chunks = chunksOf 10000 sorted
       render ((traditional, simplified, pinyin, english), ty, count) =
+        let isDef = if variantIsDefault defs simplified pinyin then "t" else "f" in
         case ty of
           _ | traditional == simplified ->
-            T.intercalate "\t" [simplified, count, pinyin, english]
+            T.intercalate "\t" [simplified, count, pinyin, isDef, english]
           Traditional ->
-            T.intercalate "\t" [traditional, simplified, "T", count, pinyin, english]
+            T.intercalate "\t" [traditional, simplified, "T", count, pinyin, isDef, english]
           Simplified ->
-            T.intercalate "\t" [simplified, traditional, "S", count, pinyin, english]
+            T.intercalate "\t" [simplified, traditional, "S", count, pinyin, isDef, english]
   forM_ (zip [0..] chunks) $ \(n,chunk) -> do
     let padded | n < 10    = '0':show n
                | otherwise = show n
@@ -69,6 +71,22 @@ main = do
   --T.writeFile "dict.txt.big.sorted" $ T.unlines
   --  [ T.unwords [key, T.pack $ show val]
   --  | (key, val) <- M.toAscList m ]
+
+variantIsDefault defs simplified pinyin =
+  case M.lookup simplified defs of
+    Nothing -> False
+    Just defPinyin -> trim defPinyin == trim pinyin
+  where
+    trim = T.replace "'" "" . T.filter (not.isSpace) . T.toLower
+
+readDefaults :: IO (M.Map Text Text)
+readDefaults = do
+  inp <- T.readFile "defaults.txt"
+  return $ M.fromList
+    [ (key, val)
+    | line <- T.lines inp
+    , [key, val] <- [T.splitOn ":" line]
+    ]
 
 chunksOf :: Int -> [e] -> [[e]]
 chunksOf _ [] = []
