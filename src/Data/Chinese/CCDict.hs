@@ -14,6 +14,7 @@ module Data.Chinese.CCDict
   , entryTraditional
   , entryWordFrequency
   , entryPinyin
+  , entryDefaultPinyin
   , Variant(..)
   , lookupMatch
   , lookupMatches
@@ -173,19 +174,20 @@ scrapeVariants dict nth key
 parseVariant :: Text -> Variant
 parseVariant line =
   case T.splitOn "\t" line of
-    [chinese, count, pinyin, english] ->
-      mkVariant chinese chinese count pinyin english
-    [traditional, simplified, "T", count, pinyin, english] ->
-      mkVariant traditional simplified count pinyin english
-    [simplified, traditional, "S", count, pinyin, english] ->
-      mkVariant traditional simplified count pinyin english
+    [chinese, count, pinyin, isDef, english] ->
+      mkVariant chinese chinese count pinyin isDef english
+    [traditional, simplified, "T", count, pinyin, isDef, english] ->
+      mkVariant traditional simplified count pinyin isDef english
+    [simplified, traditional, "S", count, pinyin, isDef, english] ->
+      mkVariant traditional simplified count pinyin isDef english
     _ -> error $ "invalid variant: " ++ T.unpack line
   where
-    mkVariant traditional simplified countStr pinyin english = Variant
+    mkVariant traditional simplified countStr pinyin isDef english = Variant
       { variantTraditional = traditional
       , variantSimplified = simplified
       , variantWordFrequency = count
       , variantPinyin = pinyin
+      , variantIsDefault = isDef == "t"
       , variantDefinitions = splitDefinition english }
       where
         Right (count,_) = T.decimal countStr
@@ -224,6 +226,7 @@ data Variant = Variant
   , variantTraditional   :: !Text
   , variantWordFrequency :: !Int
   , variantPinyin        :: !Text
+  , variantIsDefault     :: !Bool
   , variantDefinitions   :: [Text]
   } deriving ( Read, Show, Eq, Ord )
 
@@ -243,6 +246,9 @@ dominantVariant (Entry _o v vs) =
       | otherwise =
         v1
 
+defaultVariant :: Entry -> Maybe Variant
+defaultVariant = listToMaybe . filter variantIsDefault . entryVariants
+
 entrySimplified :: Entry -> Text
 entrySimplified = variantSimplified . dominantVariant
 
@@ -255,14 +261,19 @@ entryWordFrequency = variantWordFrequency . dominantVariant
 entryPinyin :: Entry -> [Text]
 entryPinyin = map variantPinyin . entryVariants
 
+entryDefaultPinyin :: Entry -> Text
+entryDefaultPinyin e = variantPinyin $
+  fromMaybe (dominantVariant e) (defaultVariant e)
+
 ppEntry :: Entry -> Text
 ppEntry = T.intercalate "\n" . map ppVariant . entryVariants
 
 ppVariant :: Variant -> Text
-ppVariant (Variant simplified traditional frequency pinyin english) =
+ppVariant (Variant simplified traditional frequency pinyin isDef english) =
   T.intercalate "\t"
-    [simplified, traditional, count, pinyin, english']
+    [simplified, traditional, count, pinyin, isDefTxt, english']
   where
+    isDefTxt = if isDef then "t" else "f"
     count = T.pack $ show frequency
     english' = T.intercalate "/" english
 
