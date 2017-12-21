@@ -15,6 +15,8 @@ module Data.Chinese.CCDict
   , entryWordFrequency
   , entryPinyin
   , entryDefaultPinyin
+  , entryHSK
+  , entryHSKIndex
   , Variant(..)
   , lookupMatch
   , lookupMatches
@@ -174,23 +176,37 @@ scrapeVariants dict nth key
 parseVariant :: Text -> Variant
 parseVariant line =
   case T.splitOn "\t" line of
-    [chinese, count, pinyin, isDef, english] ->
-      mkVariant chinese chinese count pinyin isDef english
-    [traditional, simplified, "T", count, pinyin, isDef, english] ->
-      mkVariant traditional simplified count pinyin isDef english
-    [simplified, traditional, "S", count, pinyin, isDef, english] ->
-      mkVariant traditional simplified count pinyin isDef english
+    [chinese, hskIndex, count, pinyin, isDef, english] ->
+      mkVariant chinese chinese hskIndex count pinyin isDef english
+    [traditional, simplified, "T", hskIndex, count, pinyin, isDef, english] ->
+      mkVariant traditional simplified hskIndex count pinyin isDef english
+    [simplified, traditional, "S", hskIndex, count, pinyin, isDef, english] ->
+      mkVariant traditional simplified hskIndex count pinyin isDef english
     _ -> error $ "invalid variant: " ++ T.unpack line
   where
-    mkVariant traditional simplified countStr pinyin isDef english = Variant
+    mkVariant traditional simplified hskIndexStr countStr pinyin isDef english = Variant
       { variantTraditional = traditional
       , variantSimplified = simplified
+      , variantHSK = toHSKLevel hskIndex
+      , variantHSKIndex = hskIndex
       , variantWordFrequency = count
       , variantPinyin = pinyin
       , variantIsDefault = isDef == "t"
       , variantDefinitions = splitDefinition english }
       where
         Right (count,_) = T.decimal countStr
+        toHSKLevel (-1) = -1
+        toHSKLevel n
+          | n <= 150 = 1
+          | n <= 150+150 = 2
+          | n <= 150+150+300 = 3
+          | n <= 150+150+300+600 = 4
+          | n <= 150+150+300+600+1300 = 5
+          | otherwise = 6
+        hskIndex =
+          case hskIndexStr of
+            "-" -> -1
+            _   -> let Right (count,_) = T.decimal hskIndexStr in count
 
 --freqLookup_ :: FreqMap -> Text -> Maybe Int
 --freqLookup_ freq key = worker (bounds freq)
@@ -224,6 +240,8 @@ data Entry = Entry !Text Variant [Variant]
 data Variant = Variant
   { variantSimplified    :: !Text
   , variantTraditional   :: !Text
+  , variantHSK           :: !Int
+  , variantHSKIndex      :: !Int
   , variantWordFrequency :: !Int
   , variantPinyin        :: !Text
   , variantIsDefault     :: !Bool
@@ -265,16 +283,22 @@ entryDefaultPinyin :: Entry -> Text
 entryDefaultPinyin e = variantPinyin $
   fromMaybe (dominantVariant e) (defaultVariant e)
 
+entryHSK :: Entry -> Int
+entryHSK (Entry _ v _)= variantHSK v
+
+entryHSKIndex :: Entry -> Int
+entryHSKIndex (Entry _ v _)= variantHSKIndex v
+
 ppEntry :: Entry -> Text
 ppEntry = T.intercalate "\n" . map ppVariant . entryVariants
 
 ppVariant :: Variant -> Text
-ppVariant (Variant simplified traditional frequency pinyin isDef english) =
+ppVariant (Variant simplified traditional hskLevel hskIndex count pinyin isDef english) =
   T.intercalate "\t"
-    [simplified, traditional, count, pinyin, isDefTxt, english']
+    [simplified, traditional, toT hskLevel, toT hskIndex, toT count, pinyin, isDefTxt, english']
   where
     isDefTxt = if isDef then "t" else "f"
-    count = T.pack $ show frequency
+    toT = T.pack . show
     english' = T.intercalate "/" english
 
 

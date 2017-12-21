@@ -35,6 +35,11 @@ main = do
             , let [word, countStr, _ty] = T.words line
                   Right (count,_) = T.decimal countStr ]
   dict <- readCCDict "cedict_1_0_ts_utf-8_mdbg.txt"
+  freqorder <- T.lines <$> T.readFile "freqorder.txt"
+  let hskIndex word =
+        case word `elemIndex` freqorder of
+          Nothing -> "-"
+          Just idx -> T.pack $ show idx
   let smallest [] = 0
       smallest (x:xs) = foldr min x xs
       entries = concat
@@ -55,14 +60,15 @@ main = do
       sorted = sortBy (comparing key) entries
       chunks = chunksOf 10000 sorted
       render ((traditional, simplified, pinyin, english), ty, count) =
-        let isDef = if variantIsDefault defs simplified pinyin then "t" else "f" in
+        let isDef = if variantIsDefault defs simplified pinyin then "t" else "f"
+            suffix = [hskIndex simplified, count, pinyin, isDef, english] in
         case ty of
           _ | traditional == simplified ->
-            T.intercalate "\t" [simplified, count, pinyin, isDef, english]
+            T.intercalate "\t" $ simplified : suffix
           Traditional ->
-            T.intercalate "\t" [traditional, simplified, "T", count, pinyin, isDef, english]
+            T.intercalate "\t" $ [traditional, simplified, "T"] ++ suffix
           Simplified ->
-            T.intercalate "\t" [simplified, traditional, "S", count, pinyin, isDef, english]
+            T.intercalate "\t" $ [simplified, traditional, "S"] ++ suffix
   forM_ (zip [0..] chunks) $ \(n,chunk) -> do
     let padded | n < 10    = '0':show n
                | otherwise = show n
